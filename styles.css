@@ -1889,6 +1889,8 @@ input.field-like[type="date"]:focus {
   display: block;
   color: var(--text);
   font-weight: 700;
+  font-size: 0.78rem;
+  line-height: 1.1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1998,6 +2000,11 @@ input.field-like[type="date"]:focus {
     width: 40px;
     height: 40px;
     border-radius: 11px;
+  }
+
+  .money-cell-text {
+    font-size: 0.72rem;
+    line-height: 1.05;
   }
 
   .money-lines-head {
