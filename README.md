@@ -1,43 +1,45 @@
-# Improver-UX
-Budget Planer, Debt Planner, Investments
+# Improver UX (web)
 
-A modern web application designed to help users manage personal finances, track budgets, and plan investments efficiently.
+Static site: open `index.html` or host on **GitHub Pages**. Keep **`Avapore.otf`** in the same folder as `styles.css` (headline font).
 
-🚀 Features
-📊 Budget tracking and categorization
-💰 Income and expense management
-📈 Investment planning tools
-🔍 Financial insights and analytics
-🎯 Goal-based saving strategies
-🧠 Clean, intuitive UX/UI for ease of use
-🛠️ Tech Stack
-Frontend: (add your framework, e.g. React / Vue / Angular)
-Backend: (if applicable)
-Database: (if applicable)
-Other tools: (APIs, libraries, etc.)
-⚠️ License & Usage Restrictions
+**Features:** **£ GBP** formatting, tabbed layout (**Money** / **Debts** / **Payoff**), income vs **must-pay bills**, bill line-items, **month snapshots**, debt **priority** (people → overdraft → other), chart vs pure avalanche.
 
-All rights reserved.
+## GitHub Pages
 
-This project, including but not limited to:
+1. Push this repo to GitHub.
+2. Repo **Settings → Pages**.
+3. **Build and deployment**: Source = **Deploy from a branch** (or use **GitHub Actions** if you prefer).
+4. Choose branch **main** (or your default) and folder:
+   - **`/web`**: site URL will be `https://YOUR_USER.github.io/REPO_NAME/web/`
+   - Or move everything inside `web/` into a **`docs`** folder at the repo root and select **`/docs`**: URL will be `https://YOUR_USER.github.io/REPO_NAME/`
 
-Source code
-Design (UX/UI)
-Structure and architecture
-Content and branding
+5. Wait a minute, then open the URL. Use **HTTPS** so Web Crypto (password hashing) works in all browsers.
 
-is the exclusive intellectual property of the author.
+## Local preview
 
-❗ You are NOT permitted to:
+From the `web` folder, run a static server (opening the file as `file://` may block crypto in some browsers):
 
-Copy or redistribute this code
-Use any part of the code in other projects
-Reproduce or adapt the UX/UI design
-Modify and publish this project as your own
-Use this project for commercial or non-commercial purposes
+```bash
+npx --yes serve .
+```
 
-without explicit written permission from the author.
+Then visit the URL it prints (e.g. `http://localhost:3000`).
 
-🔒 Legal Notice
+## Backup checker (optional)
 
-Unauthorized use, reproduction, or distribution of this project or any of its components may result in legal action.
+From the `web` folder, validate an exported `.json` backup:
+
+```bash
+python scripts/validate_improver_backup.py path/to/improver-ux-backup-YYYY-MM-DD.json
+```
+
+## Notes
+
+- Data stays in **this browser** (`localStorage`). Clearing site data removes accounts and plans.
+- **Add to Home Screen** (Safari / Chrome) uses `manifest.json` for an app-like icon/title where supported.
+
+## Rights
+
+**Copyright © 2026 UX UI MATE. All rights reserved.**
+
+**Private.** The source code, user interface, visuals, copy, product vision, and any other materials in this project (including but not limited to HTML, CSS, JavaScript, assets, and documentation) are **not** licensed for public use, reproduction, or distribution unless **UX UI MATE** explicitly grants permission in writing.

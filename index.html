@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#050714" />
+  <meta name="description" content="Improver UX. Plan income, must-pay bills, and debt payoff. UK." />
+  <title>Improver UX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.json" />
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true"></div>
+
+  <div class="site-header">
+    <header class="top-bar">
+      <div class="brand">
+        <h1 class="logo">Improver <span class="logo-ux">UX</span></h1>
+        <p class="tagline">Your money, your debts, one calm plan</p>
+      </div>
+      <button type="button" class="icon-btn profile-trigger" id="btnProfile" aria-label="Open profile">
+        <span class="avatar-placeholder" id="navAvatar"></span>
+      </button>
+    </header>
+
+    <nav class="app-tab-bar" role="tablist" aria-label="Improver UX sections">
+    <button type="button" class="app-tab active" role="tab" id="tabBtnMoney" aria-selected="true" aria-controls="panelMoney" data-app-tab="money">
+      <span class="app-tab-icon" aria-hidden="true"><i data-lucide="pound-sterling"></i></span>
+      <span class="app-tab-text">Money</span>
+    </button>
+    <button type="button" class="app-tab" role="tab" id="tabBtnDebts" aria-selected="false" aria-controls="panelDebts" data-app-tab="debts">
+      <span class="app-tab-icon" aria-hidden="true"><i data-lucide="layers"></i></span>
+      <span class="app-tab-text">Debts</span>
+    </button>
+    <button type="button" class="app-tab" role="tab" id="tabBtnPayoff" aria-selected="false" aria-controls="panelPayoff" data-app-tab="payoff">
+      <span class="app-tab-icon" aria-hidden="true"><i data-lucide="trending-down"></i></span>
+      <span class="app-tab-text">Payoff</span>
+    </button>
+    <button type="button" class="app-tab" role="tab" id="tabBtnInvestor" aria-selected="false" aria-controls="panelInvestor" data-app-tab="investor">
+      <span class="app-tab-icon" aria-hidden="true"><i data-lucide="scale"></i></span>
+      <span class="app-tab-text">Investor</span>
+    </button>
+    </nav>
+  </div>
+
+  <main class="main">
+    <!-- Tab 1: Income & expenses -->
+    <div class="tab-panel active" id="panelMoney" role="tabpanel" aria-labelledby="tabBtnMoney" data-panel="money">
+      <div class="panel-intro">
+        <h2 class="panel-title">Money this month</h2>
+        <p class="panel-sub muted">Add what comes in and what has to go out. We’ll show what’s left for debt payments.</p>
+      </div>
+
+      <!-- Synced from line sums for the rest of the app (simulate, month log, etc.) -->
+      <input type="hidden" id="income" value="" />
+      <input type="hidden" id="mustPayBills" value="" />
+
+      <section class="card glass money-card money-lines-card" aria-labelledby="money-income-heading">
+        <h2 id="money-income-heading" class="section-label section-label--with-icon">
+          <i data-lucide="wallet" aria-hidden="true"></i> Income
+        </h2>
+        <p class="hint muted small">Pay, benefits, side income - anything landing in your account this month. We add it up for you.</p>
+        <div class="bill-lines-toolbar bill-lines-toolbar--money-card">
+          <div class="bill-lines-main">
+            <div id="incomeItemsList" class="bill-items"></div>
+            <div class="money-lines-total">
+              <span class="muted small">Total income</span>
+              <strong id="incomeItemsSum">£0</strong>
+            </div>
+          </div>
+          <button type="button" class="btn secondary btn-with-lucide bill-add-btn" id="btnAddIncomeItem">
+            <i data-lucide="plus"></i> Add income
+          </button>
+        </div>
+      </section>
+
+      <section class="card glass money-card money-lines-card" aria-labelledby="money-expenses-heading">
+        <h2 id="money-expenses-heading" class="section-label section-label--with-icon">
+          <i data-lucide="receipt" aria-hidden="true"></i> Expenses
+        </h2>
+        <p class="hint muted small">Rent, bills, debt minimums, fees — anything you have to pay before extras. Totals update as you type.</p>
+        <div class="bill-lines-toolbar bill-lines-toolbar--money-card">
+          <div class="bill-lines-main">
+            <div id="billItemsList" class="bill-items"></div>
+            <div class="money-lines-total">
+              <span class="muted small">Total expenses</span>
+              <strong id="billItemsSum">£0</strong>
+            </div>
+          </div>
+          <button type="button" class="btn secondary btn-with-lucide bill-add-btn" id="btnAddBillItem">
+            <i data-lucide="plus"></i> Add expense
+          </button>
+        </div>
+      </section>
+
+      <section class="card glass money-card" aria-labelledby="snapshot-card-heading">
+        <h2 id="snapshot-card-heading" class="section-label">What’s left after bills</h2>
+        <p class="hint muted small">Income minus must-pay expenses — this is what could go toward debts (or savings).</p>
+        <div class="ios-summary-group ios-summary-group--embedded" aria-labelledby="snapshot-card-heading">
+          <div class="ios-summary-list" role="list">
+            <div class="ios-summary-row" role="listitem">
+              <span class="ios-summary-label">Money in</span>
+              <strong id="snapIncome" class="ios-summary-value ios-summary-value--text">£0</strong>
+            </div>
+            <div class="ios-summary-row" role="listitem">
+              <span class="ios-summary-label">Must pay out</span>
+              <strong id="snapMustPay" class="ios-summary-value ios-summary-value--text">£0</strong>
+            </div>
+            <div class="ios-summary-row ios-summary-row--footer" role="listitem">
+              <span class="ios-summary-label">What’s left</span>
+              <strong id="cashDebt" class="ios-summary-value ios-summary-value--accent">£0</strong>
+            </div>
+          </div>
+        </div>
+        <p class="money-debt-context muted small hidden" id="moneyDebtContext" aria-live="polite"></p>
+        <p class="advice-line advice-line--tight" id="leftoverAdvice" aria-live="polite"></p>
+        <p class="warning-banner hidden" id="insolventBanner" role="alert"></p>
+      </section>
+
+      <section class="card glass money-card" aria-labelledby="months-log-heading">
+        <h2 id="months-log-heading" class="section-label">Past months</h2>
+        <p class="hint muted small">Save a snapshot when you want a record. It won’t change your live numbers.</p>
+        <div class="month-log-toolbar">
+          <input type="text" id="monthLogLabel" placeholder="e.g. March 2025" class="month-label-input" />
+          <button type="button" class="btn secondary small-btn btn-with-lucide" id="btnAddMonthLog"><i data-lucide="calendar-plus"></i> Save snapshot</button>
+        </div>
+        <div class="table-wrap">
+          <table class="month-table" id="monthLogTable" aria-label="Monthly snapshots">
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th>Income</th>
+                <th>Expenses</th>
+                <th>Left</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="monthLogBody"></tbody>
+          </table>
+          <p class="muted small hidden" id="monthLogEmpty">No snapshots yet.</p>
+        </div>
+      </section>
+    </div>
+
+    <!-- Tab 2: Debts -->
+    <div class="tab-panel" id="panelDebts" role="tabpanel" aria-labelledby="tabBtnDebts" data-panel="debts">
+      <div class="panel-intro">
+        <h2 class="panel-title">Your debts</h2>
+        <p class="panel-sub muted">Add each debt as its own card. When you actually pay, tap <strong>Record payment</strong> — your balance drops and we keep a short history.</p>
+      </div>
+
+      <section class="card glass money-card debts-month-card" aria-labelledby="debts-plan-heading">
+        <h2 id="debts-plan-heading" class="section-label section-label--with-icon">
+          <i data-lucide="banknote" aria-hidden="true"></i> Planned payments this month
+        </h2>
+        <p class="hint muted small">Adds up the “payment this month” on each debt card. “What’s left” comes from the Money tab.</p>
+        <div id="debtsPaySummary" class="debts-pay-summary hidden" aria-live="polite"></div>
+      </section>
+
+      <section class="card glass money-card debt-add-card" aria-labelledby="debt-add-heading">
+        <h2 id="debt-add-heading" class="section-label section-label--with-icon">
+          <i data-lucide="plus-circle" aria-hidden="true"></i> Add a debt
+        </h2>
+        <p class="hint muted small">Fill this in, then <strong>Add to my list</strong>. It becomes a card you can edit, pay down, or remove anytime.</p>
+        <div class="debt-add-grid">
+          <label class="field full">
+            <span class="field-label">Who or what you owe</span>
+            <input type="text" id="debtDraftName" maxlength="120" placeholder="e.g. Mum, Monzo overdraft, PayPal" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span class="field-label">Balance left (£)</span>
+            <input type="number" id="debtDraftBalance" min="0" step="0.01" inputmode="decimal" placeholder="0" />
+          </label>
+          <label class="field">
+            <span class="field-label">Interest rate % (0 if none)</span>
+            <input type="number" id="debtDraftApr" min="0" step="0.1" inputmode="decimal" placeholder="0" />
+          </label>
+          <label class="field full">
+            <span class="field-label">Payment this month (£)</span>
+            <input type="number" id="debtDraftPayment" min="0" step="0.01" inputmode="decimal" placeholder="0" />
+          </label>
+          <label class="field full">
+            <span class="field-label">Type (affects payoff order)</span>
+            <select id="debtDraftTier">
+              <option value="people">Someone you know (friend, family…)</option>
+              <option value="overdraft">Overdraft or bank line</option>
+              <option value="other" selected>Card, loan, Buy Now Pay Later…</option>
+            </select>
+          </label>
+        </div>
+        <p class="pay-debt-error hidden" id="debtDraftError" role="alert"></p>
+        <button type="button" class="btn primary btn-with-lucide debt-add-submit" id="btnCommitLoan">
+          <i data-lucide="check"></i> Add to my list
+        </button>
+      </section>
+
+      <div id="loanList" class="debt-cards-stack" aria-live="polite"></div>
+
+      <section class="card glass money-card debts-totals-card" id="debtsTotalsSection" aria-labelledby="debts-totals-heading">
+        <h2 id="debts-totals-heading" class="section-label section-label--with-icon">
+          <i data-lucide="calculator" aria-hidden="true"></i> Across all debts
+        </h2>
+        <p class="hint muted small">Running total from every card above.</p>
+        <div class="money-lines-total money-lines-total--debts debt-totals-hero">
+          <span class="muted small">Total still owed</span>
+          <strong id="totalDebt">£0</strong>
+        </div>
+        <p class="muted small debts-by-tier hidden" id="debtByTier"></p>
+      </section>
+    </div>
+
+    <!-- Tab 3: Payoff -->
+    <div class="tab-panel" id="panelPayoff" role="tabpanel" aria-labelledby="tabBtnPayoff" data-panel="payoff">
+      <div class="panel-intro">
+        <h2 class="panel-title">Payoff plan</h2>
+        <p class="panel-sub muted">A suggested order, two classic methods to compare, and a chart of total debt shrinking.</p>
+      </div>
+
+      <section class="card glass tint-mint hidden" id="focusSection" aria-live="polite">
+        <div class="focus-inner">
+          <span class="focus-icon" aria-hidden="true"><i data-lucide="crosshair"></i></span>
+          <div>
+            <p class="section-label tight">Where spare cash could go</p>
+            <p class="focus-text" id="focusText"></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card glass" aria-labelledby="strategy-heading">
+        <h2 id="strategy-heading" class="section-label">Ways to attack the debt</h2>
+        <p class="recommendation" id="recommendation"></p>
+
+        <div class="subcard glass-tint priority-hero">
+          <h3 class="card-heading">Our default: people first</h3>
+          <p class="tiny muted">Extra cash goes to <strong>people you know</strong> first (smallest balance), then <strong>overdraft</strong> (highest rate), then <strong>everything else</strong>.</p>
+          <p class="big-stat mint" id="prMonths">…</p>
+          <p class="small muted" id="prInterest"></p>
+        </div>
+
+        <div class="row two strategy-grid strategy-grid--below-hero">
+          <div class="subcard glass-tint mint">
+            <h3 class="card-heading">Highest rate first (avalanche)</h3>
+            <p class="tiny muted">Always hit the biggest interest rate. Ignores the “people first” idea.</p>
+            <p class="big-stat" id="avMonths">…</p>
+            <p class="small muted" id="avInterest"></p>
+          </div>
+          <div class="subcard glass-tint violet">
+            <h3 class="card-heading">Smallest balance first (snowball)</h3>
+            <p class="tiny muted">Clear small debts for momentum. Ignores categories and rates.</p>
+            <p class="big-stat" id="snMonths">…</p>
+            <p class="small muted" id="snInterest"></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card glass" aria-labelledby="chart-heading">
+        <h2 id="chart-heading" class="section-label">Total debt over time</h2>
+        <div class="chart-wrap">
+          <canvas id="debtChart" height="220"></canvas>
+        </div>
+        <p class="muted small hidden" id="chartEmpty">Add at least one debt on the Debts tab to see this chart.</p>
+      </section>
+    </div>
+
+    <!-- Tab 4: Investor (scenario math only) -->
+    <div class="tab-panel" id="panelInvestor" role="tabpanel" aria-labelledby="tabBtnInvestor" data-panel="investor">
+      <div class="panel-intro">
+        <h2 class="panel-title">Investor</h2>
+        <p class="panel-sub muted">Plan how a fixed monthly stake could compound. Illustrative numbers only, not advice or encouragement to gamble.</p>
+      </div>
+
+      <section class="card glass" aria-labelledby="inv-inputs-heading">
+        <h2 id="inv-inputs-heading" class="section-label">What you put in</h2>
+        <div class="row two">
+          <label class="field">
+            <span class="field-label">Stake per month (£)</span>
+            <input type="number" id="invMonthlyStake" min="0" step="1" inputmode="decimal" />
+          </label>
+          <label class="field">
+            <span class="field-label">Bankroll now (£)</span>
+            <input type="number" id="invBankroll" min="0" step="0.01" inputmode="decimal" />
+          </label>
+        </div>
+        <label class="field full">
+          <span class="field-label">Target (£), optional</span>
+          <input type="number" id="invTarget" min="0" step="1" inputmode="decimal" placeholder="e.g. 20000" />
+        </label>
+        <div class="row two">
+          <label class="field">
+            <span class="field-label">Ladder legs</span>
+            <input type="number" id="invLadderLegs" min="1" max="30" step="1" />
+          </label>
+          <label class="field">
+            <span class="field-label">Odds each leg</span>
+            <input type="number" id="invLadderOdds" min="1.01" step="0.1" />
+          </label>
+        </div>
+        <div class="investor-presets">
+          <button type="button" class="btn secondary small-btn btn-with-lucide" id="invPreset73"><i data-lucide="layers"></i> 7 legs × 3</button>
+          <button type="button" class="btn secondary small-btn btn-with-lucide" id="invPresetTarget"><i data-lucide="target"></i> Example £100 → £20k</button>
+        </div>
+      </section>
+
+      <section class="card glass" aria-labelledby="inv-out-heading">
+        <h2 id="inv-out-heading" class="section-label">Scenario math</h2>
+        <div id="invTargetAnalysis" class="investor-block" aria-live="polite"></div>
+        <div id="invLadderWrap" class="investor-block">
+          <p class="tiny muted investor-block-title">Each day: previous balance × odds (full re-stake). Day 1 uses your bankroll as the starting amount.</p>
+          <div id="invLadderTable" class="investor-ladder-table"></div>
+        </div>
+        <p class="tiny muted investor-footnote">Each “step” or “day” here means one winning leg at the stated odds. Tick <strong>Done</strong> when you’ve completed that day’s leg (saved with your plan). Real outcomes are not guaranteed.</p>
+      </section>
+
+      <section class="card glass investor-discipline" aria-labelledby="inv-rem-heading">
+        <h2 id="inv-rem-heading" class="section-label investor-rem-title"><i data-lucide="shield-check"></i> Stay in control</h2>
+        <ul class="investor-rules">
+          <li>Cap selections: avoid stacking more than <strong>three</strong> picks on one ticket.</li>
+          <li>Treat this tab as a <strong>calculator</strong>, not a reason to chase losses.</li>
+          <li><strong>Patience</strong>: small, rare stakes beat all-in pressure.</li>
+          <li>If it stops feeling fun, pause and use <a href="https://www.begambleaware.org" target="_blank" rel="noopener noreferrer">BeGambleAware</a> (UK).</li>
+        </ul>
+      </section>
+    </div>
+  </main>
+
+  <!-- Record debt payment -->
+  <div class="modal-overlay hidden" id="payDebtModal" role="dialog" aria-modal="true" aria-labelledby="payDebtTitle">
+    <div class="modal glass">
+      <div class="modal-head">
+        <h2 id="payDebtTitle" class="modal-title">Record a payment</h2>
+        <button type="button" class="icon-btn close-modal" id="btnClosePayDebt" aria-label="Close"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="muted small pay-debt-context" id="payDebtContext"></p>
+        <input type="hidden" id="payDebtLoanIndex" value="" />
+        <label class="field full">
+          <span class="field-label">Amount you paid (£)</span>
+          <input type="number" id="payDebtAmount" min="0" step="0.01" inputmode="decimal" />
+        </label>
+        <label class="field full">
+          <span class="field-label">Date (optional)</span>
+          <input type="date" id="payDebtDate" />
+        </label>
+        <label class="field full">
+          <span class="field-label">Note (optional)</span>
+          <input type="text" id="payDebtNote" maxlength="200" placeholder="e.g. Bank transfer" autocomplete="off" />
+        </label>
+        <p class="pay-debt-error hidden" id="payDebtError" role="alert"></p>
+        <div class="pay-debt-actions">
+          <button type="button" class="btn primary full btn-with-lucide" id="btnPayDebtConfirm"><i data-lucide="check"></i> Save payment</button>
+          <button type="button" class="btn secondary full" id="btnPayDebtCancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile modal -->
+  <div class="modal-overlay hidden" id="profileModal" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
+    <div class="modal glass">
+      <div class="modal-head">
+        <h2 id="profileTitle" class="modal-title">Profile</h2>
+        <button type="button" class="icon-btn close-modal" id="btnCloseProfile" aria-label="Close"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="photo-block">
+          <div class="photo-preview" id="photoPreview"></div>
+          <div class="photo-actions">
+            <label class="btn secondary file-label btn-with-lucide">
+              <i data-lucide="image-plus"></i> Choose photo
+              <input type="file" id="photoInput" accept="image/*" hidden />
+            </label>
+            <button type="button" class="btn ghost btn-with-lucide" id="btnRemovePhoto"><i data-lucide="image-off"></i> Remove photo</button>
+          </div>
+        </div>
+
+        <label class="field full">
+          <span class="field-label">Display name</span>
+          <input type="text" id="displayName" maxlength="80" autocomplete="name" />
+        </label>
+
+        <div class="account-panel" id="accountPanel">
+          <p class="section-label tight">Account</p>
+          <p class="muted small" id="accountStatus">Guest on this device</p>
+
+          <div class="data-local-block">
+            <p class="section-label tight">Data on this device</p>
+            <p class="tiny muted data-local-copy">
+              Your plan, profile photo, and sign-in token live in this browser’s storage only. There is no server: nothing is sent to the cloud, and there is no password reset flow.
+              Publishing the app on <strong>GitHub Pages</strong> only hosts the public files (HTML/JS/CSS) — it does <strong>not</strong> store your numbers. Closing the app or tab on your phone usually <strong>keeps</strong> your data; you lose it if you clear site data, uninstall the browser, or use a different device unless you restore a backup.
+            </p>
+            <div class="backup-actions">
+              <button type="button" class="btn secondary ios-full-btn btn-with-lucide" id="btnExportBackup"><i data-lucide="download"></i> Export backup (.json)</button>
+              <label class="btn secondary ios-full-btn btn-with-lucide file-label backup-import-label">
+                <i data-lucide="upload"></i> Import backup
+                <input type="file" id="importBackupInput" accept="application/json,.json" hidden />
+              </label>
+            </div>
+          </div>
+
+          <div id="loggedInActions" class="hidden">
+            <button type="button" class="btn danger-text" id="btnSignOut">Sign out</button>
+            <p class="tiny muted">Delete account removes this user’s data from this browser.</p>
+            <label class="field full">
+              <span class="field-label">Password to confirm delete</span>
+              <input type="password" id="deletePassword" autocomplete="current-password" />
+            </label>
+            <button type="button" class="btn danger" id="btnDeleteAccount">Delete account</button>
+          </div>
+
+          <div id="guestAuth" class="auth-form">
+            <div class="auth-tabs" role="tablist">
+              <button type="button" class="auth-tab active" data-tab="signin" role="tab" aria-selected="true">Sign in</button>
+              <button type="button" class="auth-tab" data-tab="register" role="tab" aria-selected="false">Create account</button>
+            </div>
+            <label class="field full">
+              <span class="field-label">Email</span>
+              <input type="email" id="authEmail" autocomplete="username" />
+            </label>
+            <label class="field full">
+              <span class="field-label">Password (min 8 characters)</span>
+              <input type="password" id="authPassword" autocomplete="current-password" />
+            </label>
+            <label class="field full hidden" id="confirmWrap">
+              <span class="field-label">Confirm password</span>
+              <input type="password" id="authConfirm" autocomplete="new-password" />
+            </label>
+            <p class="auth-error hidden" id="authError" role="alert"></p>
+            <button type="button" class="btn primary full" id="btnAuthSubmit">Sign in</button>
+            <p class="tiny muted legal">
+              Email labels your encrypted password hash on this device only. No server, no sync, no reset — use Export backup if you might replace the phone or clear storage.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
