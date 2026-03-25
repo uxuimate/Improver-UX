@@ -25,10 +25,10 @@
     signedInEmail: null,
     profile: { displayName: "" },
     budget: { income: 900, mustPayBills: 400 },
-    incomeItems: [{ id: "", name: "Salary / wages", amount: 900, date: "" }],
+    incomeItems: [{ id: "", name: "Salary / wages", amount: 900, date: "", done: false }],
     billItems: [
-      { id: "", name: "Rent / housing", amount: 300, date: "" },
-      { id: "", name: "Bills & minimums", amount: 100, date: "" },
+      { id: "", name: "Rent / housing", amount: 300, date: "", done: false },
+      { id: "", name: "Bills & minimums", amount: 100, date: "", done: false },
     ],
     monthLog: [],
     loans: [],
@@ -327,12 +327,13 @@
   }
 
   function lineItemFromRaw(raw) {
-    if (!raw || typeof raw !== "object") return { id: uid(), name: "", amount: 0, date: "" };
+    if (!raw || typeof raw !== "object") return { id: uid(), name: "", amount: 0, date: "", done: false };
     return {
       id: raw.id || uid(),
       name: raw.name || "",
       amount: Number(raw.amount) || 0,
       date: typeof raw.date === "string" ? raw.date : "",
+      done: typeof raw.done === "boolean" ? raw.done : false,
     };
   }
 
@@ -345,10 +346,10 @@
     state.billItems = Array.isArray(o.billItems) ? o.billItems.map(lineItemFromRaw) : [];
     state.incomeItems = Array.isArray(o.incomeItems) ? o.incomeItems.map(lineItemFromRaw) : [];
     if (state.incomeItems.length === 0 && income > 0) {
-      state.incomeItems = [{ id: uid(), name: "Income", amount: income, date: "" }];
+      state.incomeItems = [{ id: uid(), name: "Income", amount: income, date: todayYmd(), done: false }];
     }
     if (state.billItems.length === 0 && mustPay > 0) {
-      state.billItems = [{ id: uid(), name: "Expenses", amount: mustPay, date: "" }];
+      state.billItems = [{ id: uid(), name: "Expenses", amount: mustPay, date: todayYmd(), done: false }];
     }
     state.monthLog = Array.isArray(o.monthLog)
       ? o.monthLog.map((m) => ({
@@ -374,10 +375,10 @@
     }
     if (key === "guest") {
       state.budget = { income: 900, mustPayBills: 400 };
-      state.incomeItems = [{ id: uid(), name: "Salary / wages", amount: 900, date: "" }];
+      state.incomeItems = [{ id: uid(), name: "Salary / wages", amount: 900, date: todayYmd(), done: false }];
       state.billItems = [
-        { id: uid(), name: "Rent / housing", amount: 300, date: "" },
-        { id: uid(), name: "Bills & minimums", amount: 100, date: "" },
+        { id: uid(), name: "Rent / housing", amount: 300, date: todayYmd(), done: false },
+        { id: uid(), name: "Bills & minimums", amount: 100, date: todayYmd(), done: false },
       ];
       state.monthLog = [];
       state.loans = SAMPLE_LOANS.map((l) => ({ ...l, id: uid() }));
@@ -527,32 +528,20 @@
 
   function buildMoneyLineRow(row, index, field, indexAttr, delAttr) {
     const wrap = node("div", "bill-line");
-    const src = node("input", "field-like bill-line-source");
-    src.type = "text";
-    src.placeholder = "Source";
-    src.setAttribute("aria-label", "Source");
-    src.value = row.name;
-    src.setAttribute(`data-${field}`, "name");
-    src.setAttribute(indexAttr, String(index));
+    const src = node("span", "money-cell-text bill-line-source");
+    src.setAttribute("aria-label", "Name");
+    src.textContent = row.name || "";
 
-    const amt = node("input", "field-like bill-line-amount");
-    amt.type = "number";
-    amt.min = "0";
-    amt.step = "0.01";
-    amt.placeholder = "0";
+    const amt = node("span", "money-cell-text bill-line-amount money-cell-text--amount");
     amt.setAttribute("aria-label", "Amount");
-    amt.value = row.amount;
-    amt.setAttribute(`data-${field}`, "amount");
-    amt.setAttribute(indexAttr, String(index));
+    // Match the existing look: amounts in the rows are displayed without the "£" symbol.
+    amt.textContent = money(row.amount || 0);
 
-    const dt = node("input", "field-like field-like--date bill-line-date");
-    dt.type = "date";
+    const dt = node("span", "money-cell-text bill-line-date money-cell-text--date");
     dt.setAttribute("aria-label", "Date");
-    dt.value = row.date || "";
-    dt.setAttribute(`data-${field}`, "date");
-    dt.setAttribute(indexAttr, String(index));
+    dt.textContent = formatDateDMY(row.date || "");
 
-    const btn = node("button", "btn-trash bill-line-del");
+    const btn = node("button", "money-row-x bill-line-del");
     btn.type = "button";
     btn.setAttribute("aria-label", "Remove line");
     btn.setAttribute(delAttr, String(index));
@@ -562,6 +551,58 @@
 
     wrap.append(src, amt, dt, btn);
     return wrap;
+  }
+
+  function buildMoneyTableRow(row, index, field) {
+    // field: "income" | "bill"
+    const tr = node("tr", "");
+    const isIncome = field === "income";
+    const idxAttr = isIncome ? "data-ii" : "data-i";
+    const delAttr = isIncome ? "data-income-del" : "data-bill-del";
+    const kPrefix = isIncome ? "data-income" : "data-bill";
+
+    const tdName = node("td");
+    const src = node("input", "money-line-input money-line-input--name");
+    src.type = "text";
+    src.value = row.name || "";
+    src.setAttribute(kPrefix, "name");
+    src.setAttribute(idxAttr, String(index));
+    tdName.appendChild(src);
+
+    const tdAmt = node("td");
+    const amt = node("input", "money-line-input money-line-input--amount");
+    amt.type = "number";
+    amt.min = "0";
+    amt.step = "0.01";
+    amt.inputMode = "decimal";
+    amt.value = String(Number(row.amount) || 0);
+    amt.setAttribute(kPrefix, "amount");
+    amt.setAttribute(idxAttr, String(index));
+    tdAmt.appendChild(amt);
+
+    const tdDate = node("td");
+    const dt = node("input", "money-line-input money-line-input--date");
+    dt.type = "date";
+    dt.value = row.date || "";
+    dt.setAttribute(kPrefix, "date");
+    dt.setAttribute(idxAttr, String(index));
+    tdDate.appendChild(dt);
+
+    const tdStatus = node("td", "money-line-status-cell");
+
+    const statusCol = node("div", "money-line-status-wrap");
+    const del = node("button", "money-line-del-btn");
+    del.type = "button";
+    del.setAttribute("aria-label", "Remove line");
+    del.setAttribute(delAttr, String(index));
+    const ix = node("i");
+    ix.setAttribute("data-lucide", "x");
+    del.appendChild(ix);
+
+    statusCol.appendChild(del);
+    tdStatus.appendChild(statusCol);
+    tr.append(tdName, tdAmt, tdDate, tdStatus);
+    return tr;
   }
 
   function buildIosSummaryRow(label, valueText, valueModifierClass, isFooter) {
@@ -773,7 +814,10 @@
         if (e.target.matches("[data-income]")) onIncomeItemInput(e);
       });
       inc.addEventListener("change", (e) => {
-        if (e.target.matches("[data-income]")) onIncomeItemInput(e);
+        if (e.target.matches("[data-income]")) {
+          onIncomeItemInput(e);
+          return;
+        }
       });
       inc.addEventListener("click", (e) => {
         const b = e.target.closest("[data-income-del]");
@@ -791,7 +835,10 @@
         if (e.target.matches("[data-bill]")) onBillItemInput(e);
       });
       bills.addEventListener("change", (e) => {
-        if (e.target.matches("[data-bill]")) onBillItemInput(e);
+        if (e.target.matches("[data-bill]")) {
+          onBillItemInput(e);
+          return;
+        }
       });
       bills.addEventListener("click", (e) => {
         const b = e.target.closest("[data-bill-del]");
@@ -896,6 +943,19 @@
     const list = el("incomeItemsList");
     if (!list) return;
     list.replaceChildren();
+
+    const head = node("div", "money-lines-head");
+    const hName = node("span", "money-lines-head-cell");
+    hName.textContent = "Name";
+    const hAmt = node("span", "money-lines-head-cell money-lines-head-cell--amount");
+    hAmt.textContent = "Amount";
+    const hDate = node("span", "money-lines-head-cell money-lines-head-cell--date");
+    hDate.textContent = "Date";
+    const hStatus = node("span", "money-lines-head-cell money-lines-head-cell--status");
+    hStatus.textContent = "Status";
+    head.append(hName, hAmt, hDate, hStatus);
+    list.appendChild(head);
+
     state.incomeItems.forEach((row, index) => {
       list.appendChild(buildMoneyLineRow(row, index, "income", "data-ii", "data-income-del"));
     });
@@ -913,13 +973,28 @@
     else state.incomeItems[i].amount = Number(inp.value) || 0;
     savePlanner();
     el("incomeItemsSum").textContent = moneyFull(incomeItemsSum());
-    if (k === "amount") refresh({ skipLoans: true });
+    // Avoid rerendering money inputs while typing on iPhone (prevents focus loss).
+    if (k === "amount")
+      refresh({ skipLoans: true, skipMoneyLines: true, skipMonthLog: true, skipNavAvatar: true, skipInvestor: true });
   }
 
   function renderBillItems() {
     const list = el("billItemsList");
     if (!list) return;
     list.replaceChildren();
+
+    const head = node("div", "money-lines-head");
+    const hName = node("span", "money-lines-head-cell");
+    hName.textContent = "Name";
+    const hAmt = node("span", "money-lines-head-cell money-lines-head-cell--amount");
+    hAmt.textContent = "Amount";
+    const hDate = node("span", "money-lines-head-cell money-lines-head-cell--date");
+    hDate.textContent = "Date";
+    const hStatus = node("span", "money-lines-head-cell money-lines-head-cell--status");
+    hStatus.textContent = "Status";
+    head.append(hName, hAmt, hDate, hStatus);
+    list.appendChild(head);
+
     state.billItems.forEach((b, index) => {
       list.appendChild(buildMoneyLineRow(b, index, "bill", "data-i", "data-bill-del"));
     });
@@ -937,7 +1012,9 @@
     else state.billItems[i].amount = Number(inp.value) || 0;
     savePlanner();
     el("billItemsSum").textContent = moneyFull(billItemsSum());
-    if (k === "amount") refresh({ skipLoans: true });
+    // Avoid rerendering money inputs while typing on iPhone (prevents focus loss).
+    if (k === "amount")
+      refresh({ skipLoans: true, skipMoneyLines: true, skipMonthLog: true, skipNavAvatar: true, skipInvestor: true });
   }
 
   function formatShortDate(ymd) {
@@ -950,6 +1027,18 @@
     } catch {
       return d;
     }
+  }
+
+  function formatDateDMY(ymd) {
+    if (!ymd || typeof ymd !== "string") return "";
+    const d = ymd.slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+    // yyyy-mm-dd -> dd/mm/yyyy
+    return `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`;
+  }
+
+  function todayYmd() {
+    return new Date().toISOString().slice(0, 10);
   }
 
   function recordLoanPayment(loanIndex, amount, note, atYmd) {
@@ -1010,6 +1099,128 @@
     if (modal) modal.classList.add("hidden");
   }
 
+  function openAddIncomeModal() {
+    const modal = el("addIncomeModal");
+    if (!modal) return;
+    const srcEl = el("addIncomeSource");
+    const amtEl = el("addIncomeAmount");
+    const dateEl = el("addIncomeDate");
+    const errEl = el("addIncomeError");
+
+    if (srcEl) srcEl.value = "";
+    if (amtEl) amtEl.value = "";
+    if (dateEl) dateEl.value = todayYmd();
+    if (errEl) {
+      errEl.classList.add("hidden");
+      errEl.textContent = "";
+    }
+    modal.classList.remove("hidden");
+    paintIcons();
+  }
+
+  function closeAddIncomeModal() {
+    const modal = el("addIncomeModal");
+    if (modal) modal.classList.add("hidden");
+  }
+
+  function commitAddIncomeModal() {
+    const errEl = el("addIncomeError");
+    if (errEl) {
+      errEl.classList.add("hidden");
+      errEl.textContent = "";
+    }
+
+    const srcEl = el("addIncomeSource");
+    const amtEl = el("addIncomeAmount");
+    const dateEl = el("addIncomeDate");
+
+    const source = (srcEl?.value || "").trim();
+    const amount = Number(amtEl?.value);
+
+    if (!source) {
+      if (errEl) {
+        errEl.textContent = "Add a source name (e.g. Salary / wages).";
+        errEl.classList.remove("hidden");
+      }
+      return false;
+    }
+    if (!(amount > 0)) {
+      if (errEl) {
+        errEl.textContent = "Enter an amount above zero.";
+        errEl.classList.remove("hidden");
+      }
+      return false;
+    }
+
+    const date = dateEl?.value || "";
+    state.incomeItems.push({ id: uid(), name: source, amount: round2(amount), date, done: false });
+    savePlanner();
+    closeAddIncomeModal();
+    refresh({ skipLoans: true });
+    return true;
+  }
+
+  function openAddExpenseModal() {
+    const modal = el("addExpenseModal");
+    if (!modal) return;
+    const srcEl = el("addExpenseSource");
+    const amtEl = el("addExpenseAmount");
+    const dateEl = el("addExpenseDate");
+    const errEl = el("addExpenseError");
+
+    if (srcEl) srcEl.value = "";
+    if (amtEl) amtEl.value = "";
+    if (dateEl) dateEl.value = todayYmd();
+    if (errEl) {
+      errEl.classList.add("hidden");
+      errEl.textContent = "";
+    }
+    modal.classList.remove("hidden");
+    paintIcons();
+  }
+
+  function closeAddExpenseModal() {
+    const modal = el("addExpenseModal");
+    if (modal) modal.classList.add("hidden");
+  }
+
+  function commitAddExpenseModal() {
+    const errEl = el("addExpenseError");
+    if (errEl) {
+      errEl.classList.add("hidden");
+      errEl.textContent = "";
+    }
+
+    const srcEl = el("addExpenseSource");
+    const amtEl = el("addExpenseAmount");
+    const dateEl = el("addExpenseDate");
+
+    const source = (srcEl?.value || "").trim();
+    const amount = Number(amtEl?.value);
+
+    if (!source) {
+      if (errEl) {
+        errEl.textContent = "Add a source name (e.g. Rent / housing).";
+        errEl.classList.remove("hidden");
+      }
+      return false;
+    }
+    if (!(amount > 0)) {
+      if (errEl) {
+        errEl.textContent = "Enter an amount above zero.";
+        errEl.classList.remove("hidden");
+      }
+      return false;
+    }
+
+    const date = dateEl?.value || "";
+    state.billItems.push({ id: uid(), name: source, amount: round2(amount), date, done: false });
+    savePlanner();
+    closeAddExpenseModal();
+    refresh({ skipLoans: true });
+    return true;
+  }
+
   function renderMonthLog() {
     const tbody = el("monthLogBody");
     const empty = el("monthLogEmpty");
@@ -1068,9 +1279,7 @@
     const sumPlanned = state.loans.filter((l) => Number(l.balance) > 0).reduce((s, l) => s + (Number(l.monthlyPayment) || 0), 0);
     const leftForDebt = income - mustPay;
     const snapIn = el("snapIncome");
-    const snapMust = el("snapMustPay");
     if (snapIn) snapIn.textContent = moneyFull(income);
-    if (snapMust) snapMust.textContent = moneyFull(mustPay);
     const cashDebtEl = el("cashDebt");
     if (cashDebtEl) {
       cashDebtEl.textContent = moneyFull(leftForDebt);
@@ -1174,12 +1383,14 @@
     } else focusSec.classList.add("hidden");
 
     if (!opts.skipLoans) renderLoans();
-    renderIncomeItems();
-    renderBillItems();
-    renderMonthLog();
+    if (!opts.skipMoneyLines) {
+      renderIncomeItems();
+      renderBillItems();
+    }
+    if (!opts.skipMonthLog) renderMonthLog();
     updateChart(pr.history, av.history);
-    updateNavAvatar();
-    renderInvestor();
+    if (!opts.skipNavAvatar) updateNavAvatar();
+    if (!opts.skipInvestor) renderInvestor();
   }
 
   function updateChart(prH, avH) {
@@ -1490,15 +1701,11 @@
     bindMonthLogTableOnce();
 
     el("btnAddIncomeItem").addEventListener("click", () => {
-      state.incomeItems.push({ id: uid(), name: "", amount: 0, date: "" });
-      savePlanner();
-      refresh({ skipLoans: true });
+      openAddIncomeModal();
     });
 
     el("btnAddBillItem").addEventListener("click", () => {
-      state.billItems.push({ id: uid(), name: "", amount: 0, date: "" });
-      savePlanner();
-      refresh({ skipLoans: true });
+      openAddExpenseModal();
     });
 
     el("btnAddMonthLog").addEventListener("click", () => {
@@ -1588,6 +1795,20 @@
     el("payDebtModal")?.addEventListener("click", (e) => {
       if (e.target === el("payDebtModal")) closePayDebtModal();
     });
+
+    el("btnCloseAddIncome")?.addEventListener("click", closeAddIncomeModal);
+    el("btnAddIncomeCancel")?.addEventListener("click", closeAddIncomeModal);
+    el("addIncomeModal")?.addEventListener("click", (e) => {
+      if (e.target === el("addIncomeModal")) closeAddIncomeModal();
+    });
+    el("btnAddIncomeConfirm")?.addEventListener("click", () => commitAddIncomeModal());
+
+    el("btnCloseAddExpense")?.addEventListener("click", closeAddExpenseModal);
+    el("btnAddExpenseCancel")?.addEventListener("click", closeAddExpenseModal);
+    el("addExpenseModal")?.addEventListener("click", (e) => {
+      if (e.target === el("addExpenseModal")) closeAddExpenseModal();
+    });
+    el("btnAddExpenseConfirm")?.addEventListener("click", () => commitAddExpenseModal());
 
     bindInvestor();
     bindInvestorLadderChecks();

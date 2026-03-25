@@ -71,9 +71,6 @@
               <strong id="incomeItemsSum">£0</strong>
             </div>
           </div>
-          <button type="button" class="btn secondary btn-with-lucide bill-add-btn" id="btnAddIncomeItem">
-            <i data-lucide="plus"></i> Add income
-          </button>
         </div>
       </section>
 
@@ -90,11 +87,17 @@
               <strong id="billItemsSum">£0</strong>
             </div>
           </div>
-          <button type="button" class="btn secondary btn-with-lucide bill-add-btn" id="btnAddBillItem">
-            <i data-lucide="plus"></i> Add expense
-          </button>
         </div>
       </section>
+
+      <div class="money-add-buttons" role="group" aria-label="Add income or expense">
+        <button type="button" class="btn secondary btn-with-lucide money-add-btn" id="btnAddIncomeItem">
+          <i data-lucide="plus"></i> Add income
+        </button>
+        <button type="button" class="btn secondary btn-with-lucide money-add-btn" id="btnAddBillItem">
+          <i data-lucide="plus"></i> Add expense
+        </button>
+      </div>
 
       <section class="card glass money-card" aria-labelledby="snapshot-card-heading">
         <h2 id="snapshot-card-heading" class="section-label">What’s left after bills</h2>
@@ -104,10 +107,6 @@
             <div class="ios-summary-row" role="listitem">
               <span class="ios-summary-label">Money in</span>
               <strong id="snapIncome" class="ios-summary-value ios-summary-value--text">£0</strong>
-            </div>
-            <div class="ios-summary-row" role="listitem">
-              <span class="ios-summary-label">Must pay out</span>
-              <strong id="snapMustPay" class="ios-summary-value ios-summary-value--text">£0</strong>
             </div>
             <div class="ios-summary-row ios-summary-row--footer" role="listitem">
               <span class="ios-summary-label">What’s left</span>
@@ -352,6 +351,66 @@
         <div class="pay-debt-actions">
           <button type="button" class="btn primary full btn-with-lucide" id="btnPayDebtConfirm"><i data-lucide="check"></i> Save payment</button>
           <button type="button" class="btn secondary full" id="btnPayDebtCancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add income -->
+  <div class="modal-overlay hidden" id="addIncomeModal" role="dialog" aria-modal="true" aria-labelledby="addIncomeTitle">
+    <div class="modal glass">
+      <div class="modal-head">
+        <h2 id="addIncomeTitle" class="modal-title">Add income</h2>
+        <button type="button" class="icon-btn close-modal" id="btnCloseAddIncome" aria-label="Close"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="muted small">Pay, benefits, side income — anything landing in your account this month. We'll add it up for you.</p>
+        <label class="field full">
+          <span class="field-label">Source</span>
+          <input type="text" id="addIncomeSource" maxlength="120" placeholder="e.g. Salary / wages" autocomplete="off" />
+        </label>
+        <label class="field full">
+          <span class="field-label">Amount (£)</span>
+          <input type="number" id="addIncomeAmount" min="0" step="0.01" inputmode="decimal" placeholder="0" />
+        </label>
+        <label class="field full">
+          <span class="field-label">Date (optional)</span>
+          <input type="date" id="addIncomeDate" />
+        </label>
+        <p class="pay-debt-error hidden" id="addIncomeError" role="alert"></p>
+        <div class="pay-debt-actions">
+          <button type="button" class="btn primary full btn-with-lucide" id="btnAddIncomeConfirm"><i data-lucide="check"></i> Add income</button>
+          <button type="button" class="btn secondary full" id="btnAddIncomeCancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add expense -->
+  <div class="modal-overlay hidden" id="addExpenseModal" role="dialog" aria-modal="true" aria-labelledby="addExpenseTitle">
+    <div class="modal glass">
+      <div class="modal-head">
+        <h2 id="addExpenseTitle" class="modal-title">Add expense</h2>
+        <button type="button" class="icon-btn close-modal" id="btnCloseAddExpense" aria-label="Close"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="muted small">Rent, bills, debt minimums, fees — anything you have to pay before extras. Totals update as you add.</p>
+        <label class="field full">
+          <span class="field-label">Source</span>
+          <input type="text" id="addExpenseSource" maxlength="120" placeholder="e.g. Rent / housing" autocomplete="off" />
+        </label>
+        <label class="field full">
+          <span class="field-label">Amount (£)</span>
+          <input type="number" id="addExpenseAmount" min="0" step="0.01" inputmode="decimal" placeholder="0" />
+        </label>
+        <label class="field full">
+          <span class="field-label">Date (optional)</span>
+          <input type="date" id="addExpenseDate" />
+        </label>
+        <p class="pay-debt-error hidden" id="addExpenseError" role="alert"></p>
+        <div class="pay-debt-actions">
+          <button type="button" class="btn primary full btn-with-lucide" id="btnAddExpenseConfirm"><i data-lucide="check"></i> Add expense</button>
+          <button type="button" class="btn secondary full" id="btnAddExpenseCancel">Cancel</button>
         </div>
       </div>
     </div>

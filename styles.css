@@ -1738,6 +1738,7 @@ input[type="number"]::-webkit-inner-spin-button {
 
 .bill-lines-toolbar--money-card {
   margin-top: 10px;
+  grid-template-columns: 1fr;
 }
 
 .bill-lines-main {
@@ -1745,6 +1746,32 @@ input[type="number"]::-webkit-inner-spin-button {
   flex-direction: column;
   gap: 16px;
   min-width: 0;
+}
+
+.money-lines-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 6.75rem minmax(0, 9.25rem) 44px;
+  gap: 12px;
+  align-items: center;
+  padding: 0 4px;
+  margin: 2px 0 8px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.money-lines-head-cell {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.money-lines-head-cell--amount {
+  text-align: right;
+}
+
+.money-lines-head-cell--status {
+  text-align: right;
 }
 
 .money-lines-total {
@@ -1785,6 +1812,27 @@ input[type="number"]::-webkit-inner-spin-button {
   padding-left: 16px;
   padding-right: 16px;
   white-space: nowrap;
+}
+
+.money-add-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: -8px;
+}
+
+.money-add-btn {
+  min-height: 48px;
+  width: 100%;
+  justify-content: center;
+  border-radius: 16px;
+}
+
+@media (max-width: 420px) {
+  .money-add-buttons {
+    gap: 10px;
+    margin-top: -6px;
+  }
 }
 
 .bill-items {
@@ -1836,13 +1884,59 @@ input.field-like[type="date"]:focus {
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(var(--mint-rgb), 0.16);
 }
 
+.money-cell-text {
+  min-width: 0;
+  display: block;
+  color: var(--text);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.money-cell-text--amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.money-cell-text--date {
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+
+.money-row-x {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: transparent;
+  border: none;
+  color: var(--mint);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.money-row-x:hover {
+  background: transparent;
+}
+
+.money-row-x svg.lucide {
+  width: 18px;
+  height: 18px;
+}
+
 @media (max-width: 560px) {
   .bill-line {
-    grid-template-columns: 1fr 1fr 44px;
+    /* Table-like single row: Source | Amount | Date | X */
+    grid-template-columns: minmax(0, 1fr) 4.95rem 6.1rem 40px;
     grid-template-areas:
-      "src src del"
-      "amt date del";
-    gap: 10px 12px;
+      "src amt date del";
+    gap: 8px 8px;
+    align-items: center;
+    overflow: clip; /* prevent the native date control from visually overflowing */
   }
 
   .bill-line-source {
@@ -1859,10 +1953,85 @@ input.field-like[type="date"]:focus {
 
   .bill-line-del {
     grid-area: del;
-    grid-row: 1 / span 2;
+    grid-row: auto;
     align-self: center;
     justify-self: end;
+    margin-top: 0;
   }
+
+  /* Make the inputs look more like compact table cells */
+  .bill-line .field-like {
+    min-height: 40px;
+    height: 40px;
+    padding: 6px 7px;
+    border-radius: 12px;
+    box-shadow: none;
+    border-color: rgba(255, 255, 255, 0.12);
+    font-size: 0.78rem;
+    line-height: 1.1;
+  }
+
+  .bill-line-source {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  /* iOS: shrink the date input chrome so it doesn't dominate the row */
+  .bill-line-date {
+    min-height: 40px;
+    height: 40px;
+    padding: 4px 7px;
+    font-size: 0.72rem;
+    line-height: 1;
+    border-radius: 12px;
+  }
+
+  /* Shrink delete button on mobile so it fits the compact row */
+  .bill-line-del .btn-trash {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+  }
+
+  .money-row-x {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+  }
+
+  .money-lines-head {
+    grid-template-columns: minmax(0, 1fr) 4.95rem 6.1rem 40px;
+    gap: 8px;
+    padding: 0 2px;
+    margin: 0 0 6px;
+    font-size: 0.78rem;
+  }
+
+  .money-lines-head-cell--amount {
+    text-align: left;
+  }
+
+  .money-lines-head-cell--status {
+    text-align: right;
+  }
+}
+
+/* iOS date input: keep it readable on dark backgrounds */
+.bill-line-date {
+  color: rgba(252, 250, 255, 0.94);
+}
+
+.bill-line-date::-webkit-datetime-edit,
+.bill-line-date::-webkit-datetime-edit-text,
+.bill-line-date::-webkit-datetime-edit-month-field,
+.bill-line-date::-webkit-datetime-edit-day-field,
+.bill-line-date::-webkit-datetime-edit-year-field {
+  color: rgba(252, 250, 255, 0.94);
+}
+
+.bill-line-date::-webkit-calendar-picker-indicator {
+  filter: brightness(1.15) saturate(1.2);
 }
 
 .bill-sum-row {
@@ -1874,16 +2043,16 @@ input.field-like[type="date"]:focus {
 }
 
 #panelMoney .money-lines-card .bill-items {
-  gap: 16px;
+  gap: 10px;
 }
 
 #panelMoney .money-lines-card .bill-line {
-  gap: 14px 16px;
+  gap: 10px 12px;
 }
 
 @media (max-width: 560px) {
   #panelMoney .money-lines-card .bill-line {
-    row-gap: 16px;
+    row-gap: 12px;
   }
 }
 
@@ -2036,6 +2205,17 @@ input.field-like[type="date"]:focus {
 .investor-ladder-table th {
   color: var(--muted);
   font-weight: 600;
+}
+
+@media (max-width: 560px) {
+  .investor-ladder-table table {
+    font-size: 0.8rem;
+  }
+
+  .investor-ladder-table th,
+  .investor-ladder-table td {
+    padding: 6px 8px;
+  }
 }
 
 .investor-ladder-table tr.inv-day-done {
@@ -2205,4 +2385,205 @@ input.field-like[type="date"]:focus {
 
 #panelInvestor .investor-rules li {
   margin-bottom: 12px;
+}
+
+/* iPhone: keep Investor text from running off-card */
+@media (max-width: 560px) {
+  #panelInvestor .investor-analysis-line {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+  }
+
+  #panelInvestor .investor-footnote {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    overflow: hidden;
+  }
+}
+
+/* Money tab: table-style inserted income/expense rows */
+.money-lines-table-wrap {
+  /* reuse investor-ladder-table visual style, but tighten spacing */
+}
+
+.money-lines-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.money-lines-table th,
+.money-lines-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  min-width: 0;
+}
+
+.money-lines-table thead th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.money-line-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-weight: 600;
+  min-height: 0;
+  font-size: 0.88rem;
+}
+
+.money-line-input:focus {
+  outline: none;
+  box-shadow: inset 0 -1px 0 rgba(var(--mint-rgb), 0.42);
+}
+
+.money-line-input--amount {
+  font-variant-numeric: tabular-nums;
+}
+
+.money-line-input--name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.money-line-input--date {
+  width: 100%;
+  min-width: 0;
+  font-weight: 600;
+  color: rgba(252, 250, 255, 0.94);
+  font-size: 0.78rem;
+  line-height: 1;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.money-line-input--date::-webkit-datetime-edit,
+.money-line-input--date::-webkit-datetime-edit-text,
+.money-line-input--date::-webkit-datetime-edit-month-field,
+.money-line-input--date::-webkit-datetime-edit-day-field,
+.money-line-input--date::-webkit-datetime-edit-year-field {
+  padding: 0;
+}
+
+.money-line-input--date::-webkit-calendar-picker-indicator {
+  opacity: 0.85;
+  filter: brightness(1.1) saturate(1.15);
+}
+
+.money-lines-table td:nth-child(1) {
+  width: auto;
+}
+.money-lines-table td:nth-child(2) {
+  width: 7.8rem;
+}
+.money-lines-table td:nth-child(3) {
+  width: 7.4rem;
+}
+.money-lines-table td:nth-child(4),
+.money-lines-table th:nth-child(4) {
+  width: 78px;
+}
+
+.money-line-status-cell {
+  width: 78px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.money-line-status-wrap {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+
+.money-line-status-wrap {
+  gap: 0;
+}
+
+.money-line-del-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  color: var(--warning);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.money-line-del-btn:hover {
+  background: transparent;
+}
+
+.money-line-del-btn:active {
+  transform: scale(0.98);
+}
+
+.money-line-del-btn svg.lucide {
+  width: 14px;
+  height: 14px;
+}
+
+/* iPhone adjustments for compact one-card layout */
+@media (max-width: 560px) {
+  .money-lines-table th,
+  .money-lines-table td {
+    padding: 7px 6px;
+  }
+
+  .money-lines-table td:nth-child(2) {
+    width: 5.6rem;
+  }
+
+  .money-lines-table td:nth-child(3) {
+    width: 5.6rem;
+  }
+
+  .money-lines-table td:nth-child(4),
+  .money-lines-table th:nth-child(4) {
+    width: 44px;
+  }
+
+  .money-line-status-cell {
+    width: 44px;
+  }
+
+  .money-line-del-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 10px;
+  }
+
+  .money-line-input--date {
+    width: 100%;
+    font-size: 0.82rem;
+    height: 28px;
+    min-height: 28px;
+  }
+
+  .money-line-input {
+    font-size: 0.9rem;
+  }
+
 }
