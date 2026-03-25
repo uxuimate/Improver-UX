@@ -1458,6 +1458,34 @@ input[type="number"]::-webkit-inner-spin-button {
   padding: 11px 14px;
 }
 
+/* Debts: make editable fields look more like flat records */
+#panelDebts .debt-card-fields .field input[type="number"],
+#panelDebts .debt-card-fields .field input[type="text"],
+#panelDebts .debt-card-fields .field select {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0;
+  padding: 10px 0 8px;
+  min-height: 0;
+}
+
+#panelDebts .debt-card-fields .field {
+  gap: 6px;
+}
+
+/* Tier select (uses select styling) */
+#panelDebts .debt-card-tier select {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0;
+  padding-right: 14px;
+  min-height: 0;
+}
+
 #panelDebts .field select {
   padding-right: 42px;
   background-position: right 12px center;
@@ -1621,7 +1649,7 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 .debt-payment-log__summary {
-  cursor: pointer;
+  cursor: default;
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--muted);
@@ -1771,7 +1799,7 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 .money-lines-head-cell--status {
-  text-align: right;
+  text-align: center;
 }
 
 .money-lines-total {
@@ -1818,7 +1846,7 @@ input[type="number"]::-webkit-inner-spin-button {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin-top: -8px;
+  margin-top: 10px;
 }
 
 .money-add-btn {
@@ -1831,7 +1859,7 @@ input[type="number"]::-webkit-inner-spin-button {
 @media (max-width: 420px) {
   .money-add-buttons {
     gap: 10px;
-    margin-top: -6px;
+    margin-top: 8px;
   }
 }
 
@@ -1886,7 +1914,8 @@ input.field-like[type="date"]:focus {
 
 .money-cell-text {
   min-width: 0;
-  display: block;
+  display: flex;
+  align-items: center;
   color: var(--text);
   font-weight: 700;
   font-size: 0.78rem;
@@ -1933,10 +1962,11 @@ input.field-like[type="date"]:focus {
 @media (max-width: 560px) {
   .bill-line {
     /* Table-like single row: Source | Amount | Date | X */
-    grid-template-columns: minmax(0, 1fr) 4.95rem 6.1rem 40px;
+    /* Reserve enough for £9,999 and dd/mm/yyyy; give rest to Name */
+    grid-template-columns: minmax(0, 1fr) 4.6rem 6.1rem 36px;
     grid-template-areas:
       "src amt date del";
-    gap: 8px 8px;
+    gap: 6px 6px;
     align-items: center;
     overflow: clip; /* prevent the native date control from visually overflowing */
   }
@@ -1980,7 +2010,7 @@ input.field-like[type="date"]:focus {
   }
 
   /* iOS: shrink the date input chrome so it doesn't dominate the row */
-  .bill-line-date {
+  input.bill-line-date {
     min-height: 40px;
     height: 40px;
     padding: 4px 7px;
@@ -1997,9 +2027,9 @@ input.field-like[type="date"]:focus {
   }
 
   .money-row-x {
-    width: 40px;
-    height: 40px;
-    border-radius: 11px;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
   }
 
   .money-cell-text {
@@ -2008,36 +2038,36 @@ input.field-like[type="date"]:focus {
   }
 
   .money-lines-head {
-    grid-template-columns: minmax(0, 1fr) 4.95rem 6.1rem 40px;
-    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) 4.6rem 6.1rem 36px;
+    gap: 6px;
     padding: 0 2px;
     margin: 0 0 6px;
     font-size: 0.78rem;
   }
 
   .money-lines-head-cell--amount {
-    text-align: left;
+    text-align: right;
   }
 
   .money-lines-head-cell--status {
-    text-align: right;
+    text-align: center;
   }
 }
 
 /* iOS date input: keep it readable on dark backgrounds */
-.bill-line-date {
+input.bill-line-date {
   color: rgba(252, 250, 255, 0.94);
 }
 
-.bill-line-date::-webkit-datetime-edit,
-.bill-line-date::-webkit-datetime-edit-text,
-.bill-line-date::-webkit-datetime-edit-month-field,
-.bill-line-date::-webkit-datetime-edit-day-field,
-.bill-line-date::-webkit-datetime-edit-year-field {
+input.bill-line-date::-webkit-datetime-edit,
+input.bill-line-date::-webkit-datetime-edit-text,
+input.bill-line-date::-webkit-datetime-edit-month-field,
+input.bill-line-date::-webkit-datetime-edit-day-field,
+input.bill-line-date::-webkit-datetime-edit-year-field {
   color: rgba(252, 250, 255, 0.94);
 }
 
-.bill-line-date::-webkit-calendar-picker-indicator {
+input.bill-line-date::-webkit-calendar-picker-indicator {
   filter: brightness(1.15) saturate(1.2);
 }
 
@@ -2402,6 +2432,7 @@ input.field-like[type="date"]:focus {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     overflow: hidden;
   }
 
@@ -2409,13 +2440,9 @@ input.field-like[type="date"]:focus {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 4;
+    line-clamp: 4;
     overflow: hidden;
   }
-}
-
-/* Money tab: table-style inserted income/expense rows */
-.money-lines-table-wrap {
-  /* reuse investor-ladder-table visual style, but tighten spacing */
 }
 
 .money-lines-table {
@@ -2593,4 +2620,17 @@ input.field-like[type="date"]:focus {
     font-size: 0.9rem;
   }
 
+}
+
+/* Debts (iPhone): show name + balance only */
+@media (max-width: 560px) {
+  #loanList .debt-card-planned,
+  #loanList .debt-card-tier,
+  #loanList .debt-card-fields {
+    display: none !important;
+  }
+
+  #loanList .debt-card-actions .btn.secondary {
+    display: none !important; /* "Use planned amount..." */
+  }
 }
