@@ -198,7 +198,7 @@
   function strategySubtext(r) {
     if (r.insolvent) return "These numbers don’t cover every planned payment this month";
     if (r.monthsToDebtFree != null) return `Rough interest over the journey: ${moneyFull(r.totalInterest)}`;
-    return "On paper this mix may not reach zero — check rates and monthly payments";
+    return "On paper this mix may not reach zero, check rates and monthly payments";
   }
 
   function priorityExtraTarget(loanStates) {
@@ -216,11 +216,11 @@
     let pick;
     if (minTier === 0) {
       pick = bucket.reduce((b, x) => (x.balance < b.balance ? x : b));
-      return { name: pick.name, reason: "For people you know, we start with the smallest balance — quick wins and clearer heads." };
+      return { name: pick.name, reason: "For people you know, we start with the smallest balance, quick wins and clearer heads." };
     }
     pick = bucket.reduce((b, x) => (x.apr > b.apr ? x : b));
     const label = minTier === 1 ? "On overdraft / bank debt" : "In this bucket";
-    return { name: pick.name, reason: `${label}, the steepest rate is ${pick.apr.toFixed(1)}% — that’s where extra hurts least to ignore.` };
+    return { name: pick.name, reason: `${label}, the steepest rate is ${pick.apr.toFixed(1)}%, that’s where extra hurts least to ignore.` };
   }
 
   async function emailFingerprint(email) {
@@ -1349,16 +1349,16 @@
 
     const rec = el("recommendation");
     if (state.loans.length === 0) {
-      rec.textContent = "Add what you owe on Debts and keep Money honest — then this picture matches real life.";
+      rec.textContent = "Add what you owe on Debts and keep Money honest, then this picture matches real life.";
     } else if (pr.insolvent || av.insolvent) {
       rec.textContent = "Right now, after bills, there isn’t enough for the payments you’ve set on each debt. Fix that first; avalanche vs snowball only helps once the plan fits.";
     } else if (pr.monthsToDebtFree == null) {
-      rec.textContent = "With these balances and rates, the maths may not reach zero — double-check interest and monthly payments.";
+      rec.textContent = "With these balances and rates, the maths may not reach zero, double-check interest and monthly payments.";
     } else {
       const peopleCount = state.loans.filter((l) => normalizeTier(l.tier) === "people" && Number(l.balance) > 0).length;
       rec.textContent =
         peopleCount > 0
-          ? `Our default: clear money owed to people first (smallest balance), then tackle overdraft by highest rate, then the rest. “Pure avalanche” ignores that — compare the numbers above.`
+          ? `Our default: clear money owed to people first (smallest balance), then tackle overdraft by highest rate, then the rest. “Pure avalanche” ignores that, compare the numbers above.`
           : `No “someone you know” debts tagged. We still pay overdraft before other types. Tag personal IOUs if you want them first.`;
     }
 
@@ -1378,7 +1378,7 @@
       focusSec.classList.remove("hidden");
       if (focusEl) {
         focusEl.textContent =
-          "Your planned payments use everything after bills — that’s fine. When you free up cash, start with the smallest debt to someone you know.";
+          "Your planned payments use everything after bills, that’s fine. When you free up cash, start with the smallest debt to someone you know.";
       }
     } else focusSec.classList.add("hidden");
 
@@ -1730,7 +1730,7 @@
       const name = el("debtDraftName").value.trim();
       if (!name) {
         if (err) {
-          err.textContent = "Give this debt a name — you’ll thank yourself later.";
+          err.textContent = "Give this debt a name, you’ll thank yourself later.";
           err.classList.remove("hidden");
         }
         return;
@@ -1785,7 +1785,7 @@
           closePayDebtModal();
           refresh();
         } else if (errEl) {
-          errEl.textContent = "That payment didn’t apply — check the amount and balance.";
+          errEl.textContent = "That payment didn’t apply, check the amount and balance.";
           errEl.classList.remove("hidden");
         }
       });

@@ -1794,12 +1794,21 @@ input[type="number"]::-webkit-inner-spin-button {
   text-overflow: ellipsis;
 }
 
+.money-lines-head-cell--status {
+  overflow: visible;
+  text-overflow: clip;
+}
+
 .money-lines-head-cell--amount {
-  text-align: right;
+  text-align: center;
 }
 
 .money-lines-head-cell--status {
   text-align: center;
+}
+
+.money-lines-head-cell--date {
+  text-align: right;
 }
 
 .money-lines-total {
@@ -1923,15 +1932,18 @@ input.field-like[type="date"]:focus {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  justify-content: flex-start;
 }
 
 .money-cell-text--amount {
-  text-align: right;
+  justify-content: center;
+  text-align: center;
   font-variant-numeric: tabular-nums;
 }
 
 .money-cell-text--date {
-  text-align: left;
+  justify-content: flex-end;
+  text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1963,10 +1975,10 @@ input.field-like[type="date"]:focus {
   .bill-line {
     /* Table-like single row: Source | Amount | Date | X */
     /* Reserve enough for £9,999 and dd/mm/yyyy; give rest to Name */
-    grid-template-columns: minmax(0, 1fr) 4.6rem 6.1rem 36px;
+    grid-template-columns: minmax(0, 1fr) 4.1rem 5.2rem 52px;
     grid-template-areas:
       "src amt date del";
-    gap: 6px 6px;
+    gap: 4px 6px;
     align-items: center;
     overflow: clip; /* prevent the native date control from visually overflowing */
   }
@@ -1987,7 +1999,7 @@ input.field-like[type="date"]:focus {
     grid-area: del;
     grid-row: auto;
     align-self: center;
-    justify-self: end;
+    justify-self: center;
     margin-top: 0;
   }
 
@@ -2027,26 +2039,26 @@ input.field-like[type="date"]:focus {
   }
 
   .money-row-x {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
   }
 
   .money-cell-text {
     font-size: 0.72rem;
-    line-height: 1.05;
+    line-height: 1;
   }
 
   .money-lines-head {
-    grid-template-columns: minmax(0, 1fr) 4.6rem 6.1rem 36px;
-    gap: 6px;
+    grid-template-columns: minmax(0, 1fr) 4.1rem 5.2rem 52px;
+    gap: 4px 6px;
     padding: 0 2px;
     margin: 0 0 6px;
-    font-size: 0.78rem;
+    font-size: 0.76rem;
   }
 
   .money-lines-head-cell--amount {
-    text-align: right;
+    text-align: center;
   }
 
   .money-lines-head-cell--status {
@@ -2089,7 +2101,7 @@ input.bill-line-date::-webkit-calendar-picker-indicator {
 
 @media (max-width: 560px) {
   #panelMoney .money-lines-card .bill-line {
-    row-gap: 12px;
+    gap: 12px 6px;
   }
 }
 
@@ -2186,7 +2198,7 @@ input.bill-line-date::-webkit-calendar-picker-indicator {
   grid-column: 1 / -1;
 }
 
-/* Selects use .field select (dark, custom chevron) — loan tier is .field.loan-tier */
+/* Selects use .field select (dark, custom chevron), loan tier is .field.loan-tier */
 
 /* Investor tab */
 .investor-presets {
@@ -2371,7 +2383,7 @@ input.bill-line-date::-webkit-calendar-picker-indicator {
   text-underline-offset: 2px;
 }
 
-/* Investor tab — looser vertical rhythm */
+/* Investor tab, looser vertical rhythm */
 #panelInvestor.tab-panel {
   gap: 44px;
 }
@@ -2632,5 +2644,20 @@ input.bill-line-date::-webkit-calendar-picker-indicator {
 
   #loanList .debt-card-actions .btn.secondary {
     display: none !important; /* "Use planned amount..." */
+  }
+
+  /* Debts: simplify into a clean record (name + amount only) */
+  #loanList .debt-card-balance-label {
+    display: none !important;
+  }
+
+  #loanList .debt-card-balance {
+    margin-bottom: 6px;
+    font-size: 1.35rem;
+  }
+
+  #loanList .debt-card-title-input {
+    pointer-events: none;
+    cursor: default;
   }
 }

@@ -5,7 +5,7 @@ Validate a JSON file exported from Improver UX (Profile → Export backup).
 GitHub / GitHub Pages only serves the static site (HTML, JS, CSS). Your budget
 and debts are stored in the browser (localStorage) on each device. Python on
 your machine cannot "push" that data to GitHub unless you write a separate
-script with a GitHub token — and you should not commit live credentials or
+script with a GitHub token, and you should not commit live credentials or
 password hashes. Use Export / Import in the app, or keep backup files somewhere
 private (e.g. encrypted cloud folder), not in a public repo.
 """
@@ -41,7 +41,7 @@ def main() -> int:
     for key in ("income", "mustPayBills"):
         if key not in planner:
             print(f"planner.{key} missing (may still load if zero).", file=sys.stderr)
-    print(f"OK — backup from {data.get('exportedAt', '?')}")
+    print(f"OK, backup from {data.get('exportedAt', '?')}")
     print(f"   File: {path.resolve()}")
     return 0
 
