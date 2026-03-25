@@ -2061,6 +2061,10 @@ input.field-like[type="date"]:focus {
     text-align: center;
   }
 
+  .money-lines-head-cell--date {
+    text-align: right;
+  }
+
   .money-lines-head-cell--status {
     text-align: center;
   }
@@ -2199,6 +2203,225 @@ input.bill-line-date::-webkit-calendar-picker-indicator {
 }
 
 /* Selects use .field select (dark, custom chevron), loan tier is .field.loan-tier */
+
+/* Business tab */
+.business-add-card .section-label {
+  margin-bottom: 10px;
+}
+
+.business-month-field {
+  margin-top: 2px;
+  margin-bottom: 0;
+}
+
+.business-draft-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 16px;
+  margin-top: 14px;
+}
+
+.business-draft-block {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.035);
+  padding: 12px 12px 10px;
+  min-width: 0;
+}
+
+.business-draft-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.business-draft-block-title {
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.business-draft-add.small-btn {
+  min-height: 36px;
+  padding-left: 10px;
+  padding-right: 12px;
+  font-size: 0.78rem;
+  border-radius: 12px;
+}
+
+.business-draft-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.business-draft-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 5.25rem 34px;
+  gap: 8px 8px;
+  align-items: center;
+}
+
+.business-draft-input {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.12);
+  color: var(--text);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  box-shadow: none;
+}
+
+.business-draft-input:focus {
+  outline: none;
+  border-color: rgba(var(--mint-rgb), 0.35);
+}
+
+.business-draft-input::placeholder {
+  color: rgba(235, 228, 245, 0.38);
+}
+
+.business-draft-remove {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--mint);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.business-draft-remove:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.business-draft-remove svg.lucide {
+  width: 16px;
+  height: 16px;
+}
+
+.business-draft-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.business-draft-total strong {
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+#businessSaveError {
+  margin-top: 12px;
+  margin-bottom: 0;
+}
+
+.business-save-month {
+  margin-top: 14px;
+  width: 100%;
+  min-height: 48px;
+  justify-content: center;
+  border-radius: 14px;
+}
+
+.business-summary-row.row.two {
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.business-summary-card .section-label {
+  margin-bottom: 6px;
+}
+
+.business-summary-card .big-stat {
+  margin: 4px 0 2px;
+  line-height: 1.15;
+}
+
+.business-summary-hint {
+  margin: 0;
+  line-height: 1.35;
+}
+
+.business-log-detail {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.business-log-detail td {
+  padding: 10px 12px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  vertical-align: top;
+}
+
+.business-log-detail summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 600;
+  list-style: none;
+}
+
+.business-log-detail summary::-webkit-details-marker {
+  display: none;
+}
+
+.business-log-lines {
+  margin: 8px 0 0;
+  padding-left: 1.1rem;
+  color: rgba(235, 228, 245, 0.85);
+}
+
+.business-log-lines li {
+  margin: 0.2em 0;
+}
+
+@media (max-width: 720px) {
+  .business-draft-pair {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .business-draft-add.small-btn {
+    min-height: 34px;
+    padding-left: 8px;
+    padding-right: 10px;
+  }
+
+  .business-draft-row {
+    grid-template-columns: minmax(0, 1fr) 4.6rem 32px;
+    gap: 6px 6px;
+  }
+
+  .business-draft-input {
+    min-height: 38px;
+    font-size: 0.8rem;
+    padding: 7px 8px;
+  }
+
+  .business-summary-row.row.two {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
 
 /* Investor tab */
 .investor-presets {

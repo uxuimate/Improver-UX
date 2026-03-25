@@ -31,6 +31,7 @@
       { id: "", name: "Bills & minimums", amount: 100, date: "", done: false },
     ],
     monthLog: [],
+    businessLog: [],
     loans: [],
     investor: { monthlyStake: 0, bankroll: 0, target: 0, ladderLegs: 7, ladderOdds: 3, completedLegs: [] },
   };
@@ -337,6 +338,48 @@
     };
   }
 
+  function businessLineFromRaw(raw) {
+    if (!raw || typeof raw !== "object") return { id: uid(), name: "", amount: 0 };
+    return {
+      id: raw.id || uid(),
+      name: typeof raw.name === "string" ? raw.name.slice(0, 120) : "",
+      amount: Math.max(0, Number(raw.amount) || 0),
+    };
+  }
+
+  function businessEntryFromRaw(raw) {
+    if (!raw || typeof raw !== "object") {
+      return { id: uid(), label: "", income: 0, expenses: 0, incomeItems: [], expenseItems: [] };
+    }
+    const id = raw.id || uid();
+    const label = typeof raw.label === "string" ? raw.label.slice(0, 40) : "";
+    let incomeItems = Array.isArray(raw.incomeItems) ? raw.incomeItems.map(businessLineFromRaw) : [];
+    let expenseItems = Array.isArray(raw.expenseItems) ? raw.expenseItems.map(businessLineFromRaw) : [];
+    let income = Math.max(0, Number(raw.income) || 0);
+    let expenses = Math.max(0, Number(raw.expenses) || 0);
+    if (!incomeItems.length && income > 0) {
+      incomeItems = [{ id: uid(), name: "Income", amount: round2(income) }];
+    }
+    if (!expenseItems.length && expenses > 0) {
+      expenseItems = [{ id: uid(), name: "Expense", amount: round2(expenses) }];
+    }
+    const sumInc = round2(incomeItems.reduce((s, x) => s + (Number(x.amount) || 0), 0));
+    const sumExp = round2(expenseItems.reduce((s, x) => s + (Number(x.amount) || 0), 0));
+    if (incomeItems.length) income = sumInc;
+    if (expenseItems.length) expenses = sumExp;
+    return { id, label, income, expenses, incomeItems, expenseItems };
+  }
+
+  function businessMonthTotals(entry) {
+    const inc = Array.isArray(entry.incomeItems) && entry.incomeItems.length
+      ? round2(entry.incomeItems.reduce((s, x) => s + (Number(x.amount) || 0), 0))
+      : round2(Number(entry.income) || 0);
+    const exp = Array.isArray(entry.expenseItems) && entry.expenseItems.length
+      ? round2(entry.expenseItems.reduce((s, x) => s + (Number(x.amount) || 0), 0))
+      : round2(Number(entry.expenses) || 0);
+    return { income: inc, expenses: exp };
+  }
+
   function applyPlannerPayload(o) {
     if (!o || typeof o !== "object") return false;
     const income = Number(o.income) || 0;
@@ -359,6 +402,7 @@
           mustPayBills: Number(m.mustPayBills) || 0,
         }))
       : [];
+    state.businessLog = Array.isArray(o.businessLog) ? o.businessLog.map(businessEntryFromRaw) : [];
     state.investor = mergeInvestor(o.investor);
     return true;
   }
@@ -381,6 +425,7 @@
         { id: uid(), name: "Bills & minimums", amount: 100, date: todayYmd(), done: false },
       ];
       state.monthLog = [];
+      state.businessLog = [];
       state.loans = SAMPLE_LOANS.map((l) => ({ ...l, id: uid() }));
       state.investor = defaultInvestorGuest();
     } else {
@@ -388,6 +433,7 @@
       state.incomeItems = [];
       state.billItems = [];
       state.monthLog = [];
+      state.businessLog = [];
       state.loans = [];
       state.investor = mergeInvestor(null);
     }
@@ -404,6 +450,7 @@
         incomeItems: state.incomeItems,
         billItems: state.billItems,
         monthLog: state.monthLog,
+        businessLog: state.businessLog,
         loans: state.loans,
         investor: state.investor,
       })
@@ -678,6 +725,166 @@
     return tr;
   }
 
+  function buildBusinessDraftRow(kind) {
+    const wrap = node("div", "business-draft-row");
+    wrap.setAttribute("data-draft-kind", kind);
+    const name = node("input", "business-draft-name business-draft-input");
+    name.type = "text";
+    name.setAttribute("autocomplete", "off");
+    name.placeholder = kind === "income" ? "Source" : "Item";
+    name.setAttribute("aria-label", kind === "income" ? "Income source" : "Expense name");
+    const amt = node("input", "business-draft-amt business-draft-input");
+    amt.type = "number";
+    amt.min = "0";
+    amt.step = "0.01";
+    amt.inputMode = "decimal";
+    amt.placeholder = "0";
+    amt.setAttribute("aria-label", "Amount");
+    const btn = node("button", "business-draft-remove");
+    btn.type = "button";
+    btn.setAttribute("aria-label", "Remove line");
+    btn.setAttribute("data-business-draft-remove", "1");
+    const ix = node("i");
+    ix.setAttribute("data-lucide", "x");
+    btn.appendChild(ix);
+    wrap.append(name, amt, btn);
+    return wrap;
+  }
+
+  function sumBusinessDraftContainer(container) {
+    if (!container) return 0;
+    let s = 0;
+    container.querySelectorAll(".business-draft-amt").forEach((inp) => {
+      s += Math.max(0, Number(inp.value) || 0);
+    });
+    return round2(s);
+  }
+
+  function updateBusinessDraftTotals() {
+    const i = sumBusinessDraftContainer(el("businessIncomeDraft"));
+    const x = sumBusinessDraftContainer(el("businessExpenseDraft"));
+    const ti = el("businessIncomeDraftTotal");
+    const te = el("businessExpenseDraftTotal");
+    if (ti) ti.textContent = moneyFull(i);
+    if (te) te.textContent = moneyFull(x);
+  }
+
+  function readBusinessDraftLines(container, fallbackLabel) {
+    const out = [];
+    if (!container) return out;
+    container.querySelectorAll(".business-draft-row").forEach((row) => {
+      const nameRaw = row.querySelector(".business-draft-name")?.value?.trim() || "";
+      const amount = Math.max(0, Number(row.querySelector(".business-draft-amt")?.value) || 0);
+      if (!nameRaw && amount <= 0) return;
+      const name = nameRaw || fallbackLabel;
+      out.push({ id: uid(), name, amount: round2(amount) });
+    });
+    return out;
+  }
+
+  function resetBusinessDraft() {
+    const inc = el("businessIncomeDraft");
+    const exp = el("businessExpenseDraft");
+    if (!inc || !exp) return;
+    inc.replaceChildren();
+    exp.replaceChildren();
+    inc.appendChild(buildBusinessDraftRow("income"));
+    exp.appendChild(buildBusinessDraftRow("expense"));
+    updateBusinessDraftTotals();
+    paintIcons();
+  }
+
+  function bindBusinessDraftOnce() {
+    const panel = el("panelBusiness");
+    if (!panel || panel.dataset.businessDraftBound) return;
+    panel.dataset.businessDraftBound = "1";
+    panel.addEventListener("click", (e) => {
+      if (e.target.closest("#btnBusinessAddIncome")) {
+        el("businessIncomeDraft")?.appendChild(buildBusinessDraftRow("income"));
+        updateBusinessDraftTotals();
+        paintIcons();
+        return;
+      }
+      if (e.target.closest("#btnBusinessAddExpense")) {
+        el("businessExpenseDraft")?.appendChild(buildBusinessDraftRow("expense"));
+        updateBusinessDraftTotals();
+        paintIcons();
+        return;
+      }
+      const rm = e.target.closest("[data-business-draft-remove]");
+      if (!rm) return;
+      const row = rm.closest(".business-draft-row");
+      const list = row?.parentElement;
+      if (!list || !row) return;
+      const rows = list.querySelectorAll(".business-draft-row");
+      if (rows.length <= 1) {
+        row.querySelectorAll("input").forEach((inp) => {
+          inp.value = "";
+        });
+        updateBusinessDraftTotals();
+        return;
+      }
+      row.remove();
+      updateBusinessDraftTotals();
+      paintIcons();
+    });
+    panel.addEventListener("input", (e) => {
+      if (e.target.closest("#businessIncomeDraft") || e.target.closest("#businessExpenseDraft")) {
+        updateBusinessDraftTotals();
+      }
+    });
+  }
+
+  function buildBusinessLogRows(entry, index) {
+    const { income, expenses } = businessMonthTotals(entry);
+    const profit = round2(income - expenses);
+    const tr = node("tr");
+    [entry.label, moneyFull(income), moneyFull(expenses), moneyFull(profit)].forEach((cellText) => {
+      const td = node("td");
+      td.textContent = cellText;
+      tr.appendChild(td);
+    });
+    const tdBtn = node("td");
+    const btn = node("button", "del-snap");
+    btn.type = "button";
+    btn.setAttribute("aria-label", "Remove business month");
+    btn.setAttribute("data-business-del", String(index));
+    const ix = node("i");
+    ix.setAttribute("data-lucide", "x");
+    btn.appendChild(ix);
+    tdBtn.appendChild(btn);
+    tr.appendChild(tdBtn);
+
+    const incItems = Array.isArray(entry.incomeItems) ? entry.incomeItems.filter((x) => x.name || x.amount) : [];
+    const expItems = Array.isArray(entry.expenseItems) ? entry.expenseItems.filter((x) => x.name || x.amount) : [];
+    const frag = document.createDocumentFragment();
+    frag.appendChild(tr);
+    if (incItems.length + expItems.length > 0) {
+      const tr2 = node("tr", "business-log-detail");
+      const td = node("td");
+      td.colSpan = 5;
+      const det = node("details");
+      const sum = node("summary");
+      sum.textContent = "Line items";
+      const ul = node("ul", "business-log-lines");
+      incItems.forEach((x) => {
+        const li = node("li");
+        li.textContent = `In: ${x.name || "Income"} · ${moneyFull(x.amount)}`;
+        ul.appendChild(li);
+      });
+      expItems.forEach((x) => {
+        const li = node("li");
+        li.textContent = `Out: ${x.name || "Expense"} · ${moneyFull(x.amount)}`;
+        ul.appendChild(li);
+      });
+      det.append(sum, ul);
+      td.appendChild(det);
+      tr2.appendChild(td);
+      frag.appendChild(tr2);
+    }
+    return frag;
+  }
+
   function appendLabelledNumberField(parent, labelText, dataK, index, value, step) {
     const lab = node("label", "field");
     const span = node("span", "field-label");
@@ -903,6 +1110,20 @@
       state.monthLog.splice(i, 1);
       savePlanner();
       renderMonthLog();
+    });
+  }
+
+  function bindBusinessTableOnce() {
+    const tbody = el("businessMonthBody");
+    if (!tbody || tbody.dataset.delegateBound) return;
+    tbody.dataset.delegateBound = "1";
+    tbody.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-business-del]");
+      if (!b) return;
+      const i = Number(b.getAttribute("data-business-del"));
+      state.businessLog.splice(i, 1);
+      savePlanner();
+      renderBusinessLog();
     });
   }
 
@@ -1237,6 +1458,40 @@
     paintIcons();
   }
 
+  function renderBusinessLog() {
+    const tbody = el("businessMonthBody");
+    const empty = el("businessMonthEmpty");
+    const latestProfitEl = el("businessProfitMonth");
+    const totalEarningsEl = el("businessTotalEarnings");
+    if (!tbody) return;
+    tbody.replaceChildren();
+
+    let latestProfit = 0;
+    let totalEarnings = 0;
+    if (state.businessLog.length > 0) {
+      const t0 = businessMonthTotals(state.businessLog[0]);
+      latestProfit = round2(t0.income - t0.expenses);
+      totalEarnings = round2(
+        state.businessLog.reduce((sum, row) => {
+          const t = businessMonthTotals(row);
+          return sum + (t.income - t.expenses);
+        }, 0)
+      );
+    }
+    if (latestProfitEl) latestProfitEl.textContent = moneyFull(latestProfit);
+    if (totalEarningsEl) totalEarningsEl.textContent = moneyFull(totalEarnings);
+
+    if (!state.businessLog.length) {
+      if (empty) empty.classList.remove("hidden");
+      return;
+    }
+    if (empty) empty.classList.add("hidden");
+    state.businessLog.forEach((m, index) => {
+      tbody.appendChild(buildBusinessLogRows(m, index));
+    });
+    paintIcons();
+  }
+
   function renderLoans() {
     const list = el("loanList");
     if (!list) return;
@@ -1388,6 +1643,7 @@
       renderBillItems();
     }
     if (!opts.skipMonthLog) renderMonthLog();
+    renderBusinessLog();
     updateChart(pr.history, av.history);
     if (!opts.skipNavAvatar) updateNavAvatar();
     if (!opts.skipInvestor) renderInvestor();
@@ -1525,7 +1781,7 @@
   const APP_TAB_KEY = "payoff.mainTab";
 
   function setAppTab(id) {
-    const valid = ["money", "debts", "payoff", "investor"].includes(id) ? id : "money";
+    const valid = ["money", "debts", "payoff", "business", "investor"].includes(id) ? id : "money";
     document.querySelectorAll(".app-tab").forEach((btn) => {
       const on = btn.getAttribute("data-app-tab") === valid;
       btn.classList.toggle("active", on);
@@ -1699,6 +1955,9 @@
     bindMoneyLineListsOnce();
     bindLoanListOnce();
     bindMonthLogTableOnce();
+    bindBusinessTableOnce();
+    bindBusinessDraftOnce();
+    resetBusinessDraft();
 
     el("btnAddIncomeItem").addEventListener("click", () => {
       openAddIncomeModal();
@@ -1719,6 +1978,38 @@
       el("monthLogLabel").value = "";
       savePlanner();
       renderMonthLog();
+    });
+
+    el("btnAddBusinessMonth")?.addEventListener("click", () => {
+      const errEl = el("businessSaveError");
+      if (errEl) {
+        errEl.classList.add("hidden");
+        errEl.textContent = "";
+      }
+      const label = (el("businessMonthLabel")?.value || "").trim() || `Month ${state.businessLog.length + 1}`;
+      const incomeItems = readBusinessDraftLines(el("businessIncomeDraft"), "Income");
+      const expenseItems = readBusinessDraftLines(el("businessExpenseDraft"), "Expense");
+      const income = round2(incomeItems.reduce((s, x) => s + x.amount, 0));
+      const expenses = round2(expenseItems.reduce((s, x) => s + x.amount, 0));
+      if (income <= 0 && expenses <= 0) {
+        if (errEl) {
+          errEl.textContent = "Add at least one income or expense amount (or a label with an amount).";
+          errEl.classList.remove("hidden");
+        }
+        return;
+      }
+      state.businessLog.unshift({
+        id: uid(),
+        label,
+        income,
+        expenses,
+        incomeItems,
+        expenseItems,
+      });
+      if (el("businessMonthLabel")) el("businessMonthLabel").value = "";
+      resetBusinessDraft();
+      savePlanner();
+      renderBusinessLog();
     });
 
     el("btnCommitLoan").addEventListener("click", () => {
@@ -1823,6 +2114,7 @@
           incomeItems: state.incomeItems,
           billItems: state.billItems,
           monthLog: state.monthLog,
+          businessLog: state.businessLog,
           loans: state.loans,
           investor: state.investor,
         },
@@ -1867,6 +2159,8 @@
         renderIncomeItems();
         renderBillItems();
         renderMonthLog();
+        renderBusinessLog();
+        resetBusinessDraft();
         updateNavAvatar();
         updateAccountPanel();
         refresh();
@@ -1936,6 +2230,7 @@
       el("authConfirm").value = "";
       loadPlanner();
       syncFormFromState();
+      resetBusinessDraft();
       updateAccountPanel();
       refresh();
     });
@@ -1944,6 +2239,7 @@
       signOut();
       loadPlanner();
       syncFormFromState();
+      resetBusinessDraft();
       updateAccountPanel();
       refresh();
     });
@@ -1959,6 +2255,7 @@
       }
       el("deletePassword").value = "";
       syncFormFromState();
+      resetBusinessDraft();
       updateAccountPanel();
       refresh();
     });
