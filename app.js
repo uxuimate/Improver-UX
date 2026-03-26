@@ -603,6 +603,11 @@
     return document.getElementById(id);
   }
 
+  function setBusinessAddDetailsOpen(shouldOpen) {
+    const d = el("businessAddDetails");
+    if (d && typeof shouldOpen === "boolean") d.open = shouldOpen;
+  }
+
   function node(tag, className) {
     const n = document.createElement(tag);
     if (className) n.className = className;
@@ -895,6 +900,7 @@
     }
     savePlanner();
     renderBusinessLog();
+    setBusinessAddDetailsOpen(true);
     paintIcons();
   }
 
@@ -918,12 +924,14 @@
     }
     savePlanner();
     renderBusinessLog();
+    setBusinessAddDetailsOpen(false);
   }
 
   function bindBusinessDraftOnce() {
     const panel = el("panelBusiness");
     if (!panel || panel.dataset.businessDraftBound) return;
     panel.dataset.businessDraftBound = "1";
+    el("businessAddDetails")?.addEventListener("toggle", () => paintIcons());
     panel.addEventListener("click", (e) => {
       if (e.target.closest("#btnBusinessAddIncome")) {
         el("businessIncomeDraft")?.appendChild(buildBusinessDraftRow("income"));
@@ -1095,10 +1103,14 @@
     appendLabelledNumberField(fieldsDebt, "Balance left (£)", "balance", index, loan.balance, "0.01");
     appendLabelledNumberField(fieldsDebt, "Interest % (0 if none)", "apr", index, loan.apr, "0.1");
 
-    const fieldsPlan = node("div", "debt-card-fields debt-card-fields--plan");
-    appendLabelledNumberField(fieldsPlan, "Payment this month (£)", "monthlyPayment", index, mp, "0.01");
+    const detailsDebt = node("details", "debt-card-details");
+    const sumDetails = node("summary", "debt-card-details__summary");
+    sumDetails.textContent = "Balance, rate & type";
+    const detailsBody = node("div", "debt-card-details__body");
+    detailsBody.append(tierLab, fieldsDebt);
+    detailsDebt.append(sumDetails, detailsBody);
 
-    article.append(top, balLab, balEl, planned, tierLab, fieldsDebt, fieldsPlan);
+    article.append(top, balLab, balEl, planned);
 
     if (paidOff) {
       const po = node("p", "debt-card-paid-off muted small");
@@ -1122,6 +1134,8 @@
       actions.append(b1, b2);
       article.appendChild(actions);
     }
+
+    article.appendChild(detailsDebt);
 
     if (payments.length > 0) {
       const det = node("details", "debt-payment-log");
@@ -1683,7 +1697,7 @@
     li3.append("Left after planned debt payments: ", s3);
     list.appendChild(li3);
     foot.textContent =
-      "Change planned amounts on Debts: open each card and set Payment this month (£). Change income or bills on Money.";
+      "Change planned amounts on Debts: use Payment this month (£) when you add a debt, or change income or bills on Money.";
   }
 
   function renderLoans() {
@@ -1760,7 +1774,7 @@
     if (insolvent) {
       ban.classList.remove("hidden");
       ban.textContent =
-        "After bills, you don’t have enough for the debt payments you’ve planned this month. Lower some “payment this month” amounts, trim bills, or bump income if you can.";
+        "After bills, you don’t have enough for the debt payments you’ve planned this month. Lower planned amounts (set when you added each debt), trim bills, or bump income if you can.";
     } else ban.classList.add("hidden");
 
     const dps = el("debtsPaySummary");
@@ -2193,6 +2207,7 @@
           errEl.textContent = "Add at least one income or expense amount (or a label with an amount).";
           errEl.classList.remove("hidden");
         }
+        setBusinessAddDetailsOpen(true);
         return;
       }
       const newId = businessEditBackup ? businessEditBackup.id : uid();
@@ -2214,6 +2229,7 @@
       }
       savePlanner();
       renderBusinessLog();
+      setBusinessAddDetailsOpen(false);
     });
 
     el("btnBusinessEditLatest")?.addEventListener("click", () => startEditLatestBusinessMonth());

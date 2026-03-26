@@ -1621,14 +1621,6 @@ input[type="number"]::-webkit-inner-spin-button {
   }
 }
 
-.debt-card-fields--plan {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px 14px;
-  align-items: end;
-  margin-top: 4px;
-}
-
 .debt-card-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1709,6 +1701,59 @@ input[type="number"]::-webkit-inner-spin-button {
 
 .debt-payment-log__list li {
   margin-bottom: 6px;
+}
+
+/* Collapsed by default — recording a payment doesn’t surface edit fields */
+.debt-card-details {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.debt-card-details__summary {
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}
+
+.debt-card-details__summary::-webkit-details-marker {
+  display: none;
+}
+
+.debt-card-details__summary::after {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid rgba(255, 255, 255, 0.35);
+  margin-left: auto;
+  transition: transform 0.15s ease;
+}
+
+.debt-card-details[open] .debt-card-details__summary::after {
+  transform: rotate(180deg);
+}
+
+.debt-card-details__summary:hover {
+  color: rgba(252, 250, 255, 0.78);
+}
+
+.debt-card-details__body {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.debt-card-details__body .debt-card-tier {
+  margin-bottom: 12px;
 }
 
 .loan-pay-strip {
@@ -2230,6 +2275,69 @@ input.bill-line-date::-webkit-calendar-picker-indicator {
   margin-bottom: 8px;
 }
 
+.business-add-details {
+  margin: 0;
+}
+
+.business-add-details__summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 2px 0 4px;
+  border-radius: 12px;
+  outline: none;
+}
+
+.business-add-details__summary::-webkit-details-marker {
+  display: none;
+}
+
+.business-add-details__summary:focus-visible {
+  box-shadow: 0 0 0 2px rgba(var(--mint-rgb), 0.45);
+}
+
+.business-add-details__summary-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+  width: 100%;
+  position: relative;
+  padding-right: 28px;
+}
+
+.business-add-details__summary-inner::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  margin-top: -3px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid rgba(255, 255, 255, 0.35);
+  transition: transform 0.18s ease;
+}
+
+.business-add-details[open] .business-add-details__summary-inner::after {
+  transform: rotate(180deg);
+}
+
+.business-add-details__title.section-label {
+  margin-bottom: 0;
+}
+
+.business-add-details__eyebrow {
+  margin: 0;
+  line-height: 1.35;
+}
+
+.business-add-details__body {
+  padding-top: 14px;
+  margin-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 .business-add-lead {
   margin: 0 0 12px;
   line-height: 1.45;
@@ -2377,13 +2485,29 @@ input.bill-line-date::-webkit-calendar-picker-indicator {
   margin-bottom: 6px;
 }
 
-.business-summary-card .big-stat {
-  margin: 4px 0 2px;
-  line-height: 1.15;
+/* Direct child only — profit card wraps its stat in .business-profit-hero */
+.business-summary-card > .big-stat {
+  margin: 10px 0 14px;
+  line-height: 1.22;
+  display: block;
 }
 
 .business-summary-card .big-stat.big-stat--warn {
   color: var(--warning);
+}
+
+.business-profit-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 22px;
+  margin: 8px 0 20px;
+}
+
+.business-profit-hero .big-stat {
+  margin: 0;
+  line-height: 1.18;
+  display: block;
 }
 
 .business-summary-hint {
@@ -2424,12 +2548,38 @@ input.bill-line-date::-webkit-calendar-picker-indicator {
 .business-edit-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin: 0 0 8px;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-start;
+  width: auto;
+  max-width: 100%;
+  margin: 0;
 }
 
 .business-edit-actions .small-btn {
-  min-height: 38px;
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 7px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  box-shadow: none;
+}
+
+.business-edit-actions .small-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.business-edit-actions .small-btn:active {
+  transform: scale(0.99);
+}
+
+.business-edit-actions .btn-with-lucide svg.lucide {
+  width: 14px;
+  height: 14px;
 }
 
 .business-log-detail {
@@ -2969,21 +3119,8 @@ input.bill-line-date::-webkit-calendar-picker-indicator {
 
 }
 
-/* Debts (iPhone): name + balance + planned payment field (balance/APR hidden in second block) */
+/* Debts (iPhone): compact header; balance/APR stay available (no per-card planned field) */
 @media (max-width: 560px) {
-  #loanList .debt-card-tier,
-  #loanList .debt-card-fields--debt {
-    display: none !important;
-  }
-
-  #loanList .debt-card-fields--plan {
-    display: grid !important;
-  }
-
-  #loanList .debt-card-planned {
-    display: block !important;
-  }
-
   #loanList .debt-card-actions .btn.secondary {
     display: none !important; /* "Use planned amount..." */
   }

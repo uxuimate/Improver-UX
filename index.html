@@ -164,18 +164,18 @@
       <div class="tab-panel" id="panelDebts" role="tabpanel" aria-labelledby="tabBtnDebts" data-panel="debts">
         <div class="panel-intro">
           <h2 class="panel-title">Your debts</h2>
-          <p class="panel-sub muted">Add each debt as its own card. <strong>How much you plan to pay this month</strong>
-            goes in each card’s <strong>Payment this month (£)</strong> field (under the balance on your phone, or in
-            the card on a larger screen). When you actually pay, tap <strong>Record payment</strong> to lower the
-            balance.</p>
+          <p class="panel-sub muted">Add each debt as its own card. Optionally set <strong>Payment this month (£)</strong>
+            when you add it so we can total your plan and pre-fill <strong>Record payment</strong>. When you pay, tap
+            <strong>Record payment</strong> to lower the balance.</p>
         </div>
 
         <section class="card glass money-card debts-month-card" aria-labelledby="debts-plan-heading">
           <h2 id="debts-plan-heading" class="section-label section-label--with-icon">
             <i data-lucide="banknote" aria-hidden="true"></i> Planned payments this month
           </h2>
-          <p class="hint muted small">We add up every card’s <strong>Payment this month (£)</strong>. If you see £0,
-            open each debt below and type what you intend to pay. “What’s left” after bills comes from the Money tab.</p>
+          <p class="hint muted small">We add up <strong>Payment this month (£)</strong> from <strong>Add a debt</strong>
+            (per card). Use <strong>Record payment</strong> to log what you actually paid. “What’s left” after bills
+            comes from the Money tab.</p>
           <div id="debtsPaySummary" class="debts-pay-summary hidden" aria-live="polite"></div>
         </section>
 
@@ -304,52 +304,63 @@
         </div>
 
         <section class="card glass money-card business-add-card" aria-labelledby="business-input-heading">
-          <h2 id="business-input-heading" class="section-label section-label--with-icon">
-            <i data-lucide="calendar-range" aria-hidden="true"></i> Add current month
-          </h2>
-          <p class="hint muted small business-add-lead" id="businessAddLead">Add your monthly incomes, expenses, and
-            lines as you like, then save. You can use decimals (e.g. 19.99).</p>
-          <label class="field full business-month-field">
-            <span class="field-label">Month</span>
-            <input type="text" id="businessMonthLabel" maxlength="40" placeholder="e.g. March 2026"
-            autocomplete="off" />
-          </label>
+          <details class="business-add-details" id="businessAddDetails">
+            <summary class="business-add-details__summary">
+              <span class="business-add-details__summary-inner">
+                <span id="business-input-heading" class="section-label section-label--with-icon business-add-details__title"
+                role="heading" aria-level="2">
+                  <i data-lucide="calendar-range" aria-hidden="true"></i>
+                  Add current month
+                </span>
+                <span class="muted small business-add-details__eyebrow">Open to enter income and expenses</span>
+              </span>
+            </summary>
+            <div class="business-add-details__body">
+              <p class="hint muted small business-add-lead" id="businessAddLead">Add your monthly incomes, expenses, and
+                lines as you like, then save. You can use decimals (e.g. 19.99).</p>
+              <label class="field full business-month-field">
+                <span class="field-label">Month</span>
+                <input type="text" id="businessMonthLabel" maxlength="40" placeholder="e.g. March 2026"
+                autocomplete="off" />
+              </label>
 
-          <div class="business-draft-pair" id="businessDraftPair">
-            <div class="business-draft-block business-draft-block--income">
-              <div class="business-draft-block-head">
-                <span class="business-draft-block-title">Income</span>
-                <button type="button" class="btn secondary small-btn btn-with-lucide business-draft-add"
-                id="btnBusinessAddIncome">
-                  <i data-lucide="plus"></i> Line
-                </button>
+              <div class="business-draft-pair" id="businessDraftPair">
+                <div class="business-draft-block business-draft-block--income">
+                  <div class="business-draft-block-head">
+                    <span class="business-draft-block-title">Income</span>
+                    <button type="button" class="btn secondary small-btn btn-with-lucide business-draft-add"
+                    id="btnBusinessAddIncome">
+                      <i data-lucide="plus"></i> Line
+                    </button>
+                  </div>
+                  <div class="business-draft-rows" id="businessIncomeDraft" aria-label="Business income lines"></div>
+                  <div class="business-draft-total">
+                    <span class="muted small">Total</span>
+                    <strong id="businessIncomeDraftTotal">£0.00</strong>
+                  </div>
+                </div>
+                <div class="business-draft-block business-draft-block--expense">
+                  <div class="business-draft-block-head">
+                    <span class="business-draft-block-title">Expenses</span>
+                    <button type="button" class="btn secondary small-btn btn-with-lucide business-draft-add"
+                    id="btnBusinessAddExpense">
+                      <i data-lucide="plus"></i> Line
+                    </button>
+                  </div>
+                  <div class="business-draft-rows" id="businessExpenseDraft" aria-label="Business expense lines"></div>
+                  <div class="business-draft-total">
+                    <span class="muted small">Total</span>
+                    <strong id="businessExpenseDraftTotal">£0.00</strong>
+                  </div>
+                </div>
               </div>
-              <div class="business-draft-rows" id="businessIncomeDraft" aria-label="Business income lines"></div>
-              <div class="business-draft-total">
-                <span class="muted small">Total</span>
-                <strong id="businessIncomeDraftTotal">£0.00</strong>
-              </div>
-            </div>
-            <div class="business-draft-block business-draft-block--expense">
-              <div class="business-draft-block-head">
-                <span class="business-draft-block-title">Expenses</span>
-                <button type="button" class="btn secondary small-btn btn-with-lucide business-draft-add"
-                id="btnBusinessAddExpense">
-                  <i data-lucide="plus"></i> Line
-                </button>
-              </div>
-              <div class="business-draft-rows" id="businessExpenseDraft" aria-label="Business expense lines"></div>
-              <div class="business-draft-total">
-                <span class="muted small">Total</span>
-                <strong id="businessExpenseDraftTotal">£0.00</strong>
-              </div>
-            </div>
-          </div>
 
-          <p class="pay-debt-error hidden" id="businessSaveError" role="alert"></p>
-          <button type="button" class="btn secondary btn-with-lucide business-save-month" id="btnAddBusinessMonth">
-            <i data-lucide="check"></i> Add month
-          </button>
+              <p class="pay-debt-error hidden" id="businessSaveError" role="alert"></p>
+              <button type="button" class="btn secondary btn-with-lucide business-save-month" id="btnAddBusinessMonth">
+                <i data-lucide="check"></i> Add month
+              </button>
+            </div>
+          </details>
         </section>
 
         <div class="row two business-summary-row">
@@ -366,12 +377,14 @@
                 <strong id="businessLatestExpenseDisplay">£0.00</strong>
               </div>
             </div>
-            <p class="big-stat mint" id="businessProfitMonth">£0.00</p>
-            <div class="business-edit-actions">
-              <button type="button" class="btn secondary small-btn btn-with-lucide hidden" id="btnBusinessEditLatest">
-                <i data-lucide="pencil"></i> Adjust this month
-              </button>
-              <button type="button" class="btn secondary small-btn hidden" id="btnBusinessCancelEdit">Cancel edit</button>
+            <div class="business-profit-hero">
+              <p class="big-stat mint" id="businessProfitMonth">£0.00</p>
+              <div class="business-edit-actions">
+                <button type="button" class="btn secondary small-btn btn-with-lucide hidden" id="btnBusinessEditLatest">
+                  <i data-lucide="pencil"></i> Adjust this month
+                </button>
+                <button type="button" class="btn secondary small-btn hidden" id="btnBusinessCancelEdit">Cancel edit</button>
+              </div>
             </div>
             <p class="muted small business-summary-hint">Latest saved month. Use Adjust to edit it in the form above.</p>
           </section>
