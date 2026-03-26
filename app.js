@@ -761,8 +761,14 @@
     if (!tbody || !totalEl) return;
 
     const ymKey = ymKeyFromYmd(todayYmd());
-    const sumPlanned = state.loans.reduce((s, l) => s + (Number(l.monthlyPayment) || 0), 0);
-    totalEl.textContent = money(Math.round(sumPlanned));
+    // Show "planned payments this month" as the remaining planned amount,
+    // so deleting a recorded planned payment increases this total again.
+    const sumRemaining = state.loans.reduce((s, loan) => {
+      const plannedTotal = Math.max(0, Number(loan.monthlyPayment) || 0);
+      const paidThisYm = paymentsThisYmSum(loan, ymKey);
+      return s + Math.max(0, Math.round(plannedTotal - paidThisYm));
+    }, 0);
+    totalEl.textContent = money(sumRemaining);
 
     tbody.replaceChildren();
 
