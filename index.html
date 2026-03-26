@@ -134,6 +134,33 @@
           <p class="warning-banner hidden" id="insolventBanner" role="alert"></p>
         </section>
 
+        <section class="card glass money-card planned-debts-card" aria-labelledby="planned-debts-heading">
+          <h2 id="planned-debts-heading" class="section-label section-label--with-icon">
+            <i data-lucide="banknote" aria-hidden="true"></i> Planned debt
+          </h2>
+          <p class="hint muted small" id="plannedDebtsHint">
+            Reserve what’s left after bills for debt payments. Edit amounts, then tick to record.
+          </p>
+          <div class="money-lines-total money-lines-total--planned-debts">
+            <span class="muted small">Planned this month</span>
+            <strong id="plannedDebtsTotal">£0.00</strong>
+          </div>
+
+          <div class="table-wrap planned-debts-table-wrap">
+            <table class="planned-debts-table" aria-label="Planned debt payments">
+              <thead>
+                <tr>
+                  <th>Debt</th>
+                  <th>Planned (£)</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="plannedDebtsBody"></tbody>
+            </table>
+            <p class="muted small hidden" id="plannedDebtsEmpty">Add debts on the Debts tab to see planned payments.</p>
+          </div>
+        </section>
+
         <section class="card glass money-card" aria-labelledby="months-log-heading">
           <h2 id="months-log-heading" class="section-label">Past months</h2>
           <p class="hint muted small">Save a snapshot when you want a record. It won’t change your live numbers.</p>

@@ -751,6 +751,129 @@
     debtCtx.append(spareStrong, " is left for savings or life.");
   }
 
+  function renderPlannedDebtsCard() {
+    const tbody = el("plannedDebtsBody");
+    const totalEl = el("plannedDebtsTotal");
+    const empty = el("plannedDebtsEmpty");
+    if (!tbody || !totalEl) return;
+
+    const ymKey = ymKeyFromYmd(todayYmd());
+    const sumPlanned = state.loans.reduce((s, l) => s + (Number(l.monthlyPayment) || 0), 0);
+    totalEl.textContent = moneyFull(sumPlanned);
+
+    tbody.replaceChildren();
+
+    const shouldShow = (loan) => {
+      const mp = Math.max(0, Number(loan.monthlyPayment) || 0);
+      const paid = paymentsThisYmSum(loan, ymKey);
+      const bal = Math.max(0, Number(loan.balance) || 0);
+      return mp > 0.005 || paid > 0.005 || bal > 0.005;
+    };
+
+    const shown = [];
+    state.loans.forEach((loan, i) => {
+      if (shouldShow(loan)) shown.push(i);
+    });
+
+    if (!shown.length) {
+      if (empty) empty.classList.remove("hidden");
+      paintIcons();
+      return;
+    }
+    if (empty) empty.classList.add("hidden");
+
+    shown.forEach((i) => {
+      const loan = state.loans[i];
+      const name = (loan.name || "").trim() || "Debt";
+      const plannedTotal = Math.max(0, Number(loan.monthlyPayment) || 0);
+      const paidThisYm = paymentsThisYmSum(loan, ymKey);
+      const remainingPlanned = round2(Math.max(0, plannedTotal - paidThisYm));
+      const done = remainingPlanned <= 0.005;
+      const bal = Math.max(0, Number(loan.balance) || 0);
+
+      const tr = node("tr");
+      const tdName = node("td");
+      tdName.className = "planned-debt-name";
+      tdName.textContent = name;
+
+      const tdAmt = node("td");
+      const inp = node("input", "planned-debt-input");
+      inp.type = "number";
+      inp.step = "0.01";
+      inp.min = "0";
+      inp.max = String(round2(bal));
+      inp.value = String(remainingPlanned.toFixed(2));
+      inp.setAttribute("data-plan-i", String(i));
+      inp.setAttribute("aria-label", `Planned payment for ${name}`);
+      tdAmt.appendChild(inp);
+
+      const tdStatus = node("td");
+      tdStatus.style.textAlign = "right";
+
+      const btn = node("button", "planned-debt-status-btn btn secondary btn-with-lucide");
+      btn.type = "button";
+      btn.setAttribute("data-plan-record", String(i));
+      btn.disabled = done || remainingPlanned <= 0.005 || bal <= 0.005;
+      btn.setAttribute("aria-label", done ? `Planned payment complete for ${name}` : `Record planned payment for ${name}`);
+
+      const ix = node("i");
+      ix.setAttribute("data-lucide", "check");
+      btn.appendChild(ix);
+
+      tdStatus.appendChild(btn);
+      tr.append(tdName, tdAmt, tdStatus);
+      tbody.appendChild(tr);
+    });
+
+    paintIcons();
+  }
+
+  function bindPlannedDebtsOnce() {
+    const tbody = el("plannedDebtsBody");
+    if (!tbody || tbody.dataset.delegateBound) return;
+    tbody.dataset.delegateBound = "1";
+
+    tbody.addEventListener("input", (e) => {
+      const inp = e.target.closest(".planned-debt-input");
+      if (!inp) return;
+      const i = Number(inp.getAttribute("data-plan-i"));
+      const loan = state.loans[i];
+      if (!loan) return;
+      const ymKey = ymKeyFromYmd(todayYmd());
+      const paidThisYm = paymentsThisYmSum(loan, ymKey);
+      const newRemaining = round2(Math.max(0, Number(inp.value) || 0));
+      const bal = Math.max(0, Number(loan.balance) || 0);
+      const clampedRemaining = round2(Math.min(newRemaining, bal));
+      loan.monthlyPayment = round2(paidThisYm + clampedRemaining);
+      savePlanner();
+      // Don't call refresh on every keystroke; avoids fighting focus.
+    });
+
+    tbody.addEventListener("change", (e) => {
+      const inp = e.target.closest(".planned-debt-input");
+      if (!inp) return;
+      savePlanner();
+      refresh({ skipLoans: true });
+    });
+
+    tbody.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-plan-record]");
+      if (!btn) return;
+      const i = Number(btn.getAttribute("data-plan-record"));
+      const loan = state.loans[i];
+      if (!loan) return;
+      const ymKey = ymKeyFromYmd(todayYmd());
+      const remainingPlanned = plannedRemainingForLoan(loan, ymKey);
+      if (remainingPlanned <= 0.005) return;
+      const bal = Math.max(0, Number(loan.balance) || 0);
+      if (bal <= 0.005) return;
+      if (recordLoanPayment(i, remainingPlanned, "Planned debt payment", todayYmd())) {
+        savePlanner();
+        refresh();
+      }
+    });
+  }
+
   function buildMonthLogRow(entry, index) {
     const left = entry.income - entry.mustPayBills;
     const tr = node("tr");
@@ -1038,11 +1161,14 @@
     const t = normalizeTier(loan.tier);
     const bal = Math.max(0, Number(loan.balance) || 0);
     const mp = Math.max(0, Number(loan.monthlyPayment) || 0);
-    const plannedApply = round2(Math.min(mp, bal));
-    const newBal = Math.max(0, round2(bal - plannedApply));
     const payments = Array.isArray(loan.payments) ? loan.payments : [];
     const paidOff = bal <= 0.005;
-    const capPart = mp > bal ? " (capped by what’s left)" : "";
+    const ymKey = ymKeyFromYmd(todayYmd());
+    const paidThisYm = paymentsThisYmSum(loan, ymKey);
+    const remainingPlanned = plannedRemainingForLoan(loan, ymKey);
+    const plannedApply = round2(Math.min(remainingPlanned, bal));
+    const newBal = Math.max(0, round2(bal - plannedApply));
+    const capPart = remainingPlanned > bal ? " (capped by what’s left)" : "";
 
     const article = node("article", "card glass money-card debt-card");
     article.setAttribute("data-loan-index", String(index));
@@ -1072,17 +1198,33 @@
     balEl.appendChild(balStrong);
 
     const planned = node("div", "debt-card-planned");
+    if (mp <= 0.005 && paidThisYm <= 0.005) planned.classList.add("hidden");
     const pMain = node("p", "debt-card-planned-main");
-    pMain.append("You’re planning ");
-    const planAmt = node("strong");
-    planAmt.textContent = moneyFull(plannedApply);
-    pMain.append(planAmt, ` this month toward this debt${capPart}.`);
-    const pSub = node("p", "debt-card-planned-sub muted small");
-    pSub.append("If you paid that much, you’d be down to about ");
-    const newBalS = node("strong");
-    newBalS.textContent = moneyFull(newBal);
-    pSub.append(newBalS, " before interest.");
-    planned.append(pMain, pSub);
+    if (remainingPlanned <= 0.005 && mp > 0.005) {
+      const planAmt = node("strong");
+      pMain.append("You’ve paid ");
+      planAmt.textContent = moneyFull(mp);
+      pMain.append(planAmt, " this month toward this debt.");
+      planned.appendChild(pMain);
+    } else if (mp <= 0.005 && paidThisYm > 0.005) {
+      const paidAmt = node("strong");
+      pMain.append("You’ve paid ");
+      paidAmt.textContent = moneyFull(paidThisYm);
+      pMain.append(paidAmt, " this month toward this debt.");
+      planned.appendChild(pMain);
+    } else {
+      pMain.append("You’re planning ");
+      const planAmt = node("strong");
+      planAmt.textContent = moneyFull(plannedApply);
+      pMain.append(planAmt, ` this month toward this debt${capPart}.`);
+
+      const pSub = node("p", "debt-card-planned-sub muted small");
+      pSub.append("If you paid that much, you’d be down to about ");
+      const newBalS = node("strong");
+      newBalS.textContent = moneyFull(newBal);
+      pSub.append(newBalS, " before interest.");
+      planned.append(pMain, pSub);
+    }
 
     const tierLab = node("label", "field loan-tier debt-card-tier");
     const tierSpan = node("span", "field-label");
@@ -1225,7 +1367,10 @@
         if (!loan) return;
         const b = Math.max(0, Number(loan.balance) || 0);
         const mPay = Math.max(0, Number(loan.monthlyPayment) || 0);
-        const amt = round2(Math.min(mPay, b));
+        const ymKey = ymKeyFromYmd(todayYmd());
+        const paidThisYm = paymentsThisYmSum(loan, ymKey);
+        const remainingPlanned = round2(Math.max(0, mPay - paidThisYm));
+        const amt = round2(Math.min(remainingPlanned, b));
         if (amt <= 0) return;
         if (recordLoanPayment(i, amt, "Planned monthly payment")) {
           savePlanner();
@@ -1404,6 +1549,29 @@
     return new Date().toISOString().slice(0, 10);
   }
 
+  function ymKeyFromYmd(ymd) {
+    // yyyy-mm-dd -> yyyy-mm
+    if (!ymd || typeof ymd !== "string" || ymd.length < 7) return "";
+    return ymd.slice(0, 7);
+  }
+
+  function paymentsThisYmSum(loan, ymKey) {
+    if (!loan || !Array.isArray(loan.payments) || !ymKey) return 0;
+    let s = 0;
+    loan.payments.forEach((p) => {
+      const at = p && typeof p.at === "string" ? p.at : "";
+      if (!at.startsWith(ymKey)) return;
+      s += Number(p && p.amount != null ? p.amount : 0) || 0;
+    });
+    return round2(s);
+  }
+
+  function plannedRemainingForLoan(loan, ymKey) {
+    const mp = Math.max(0, Number(loan?.monthlyPayment) || 0);
+    const paidThisYm = paymentsThisYmSum(loan, ymKey);
+    return round2(Math.max(0, mp - paidThisYm));
+  }
+
   function recordLoanPayment(loanIndex, amount, note, atYmd) {
     const loan = state.loans[loanIndex];
     if (!loan) return false;
@@ -1430,8 +1598,9 @@
     const loan = state.loans[index];
     if (!loan) return;
     const bal = Math.max(0, Number(loan.balance) || 0);
-    const mp = Math.max(0, Number(loan.monthlyPayment) || 0);
-    const suggested = round2(Math.min(mp, bal));
+    const ymKey = ymKeyFromYmd(todayYmd());
+    const remainingPlanned = plannedRemainingForLoan(loan, ymKey);
+    const suggested = round2(Math.min(remainingPlanned, bal));
     const title = el("payDebtTitle");
     const ctx = el("payDebtContext");
     if (title) title.textContent = "Record a payment";
@@ -1738,10 +1907,54 @@
     const mustPay = Number(el("mustPayBills").value) || 0;
     state.budget.income = income;
     state.budget.mustPayBills = mustPay;
+
+    const leftForDebt = income - mustPay;
+
+    // Planned Debt: if the user hasn't set any planned amounts yet, prefill from:
+    // 1) payments already recorded this month, then
+    // 2) remaining spare money, distributed by the app's default payoff priority.
+    const ymKey = ymKeyFromYmd(todayYmd());
+    let didInitPlannedDebts = false;
+    const sumPlannedBefore = state.loans.reduce((s, l) => s + (Number(l.monthlyPayment) || 0), 0);
+    if (state.loans.length && sumPlannedBefore <= 0.005) {
+      const paidTotal = state.loans.reduce((s, l) => s + paymentsThisYmSum(l, ymKey), 0);
+      state.loans.forEach((l) => {
+        l.monthlyPayment = paymentsThisYmSum(l, ymKey);
+      });
+
+      let remaining = round2(leftForDebt - paidTotal);
+      if (remaining > 0.005) {
+        const withMeta = state.loans.map((l, i) => ({
+          i,
+          tier: normalizeTier(l.tier),
+          balance: Math.max(0, Number(l.balance) || 0),
+          apr: Math.max(0, Number(l.apr) || 0),
+        }));
+
+        // Default: people first (smallest balance), then overdraft highest rate, then everything else highest rate.
+        withMeta.sort((a, b) => {
+          const ta = TIER_ORDER[a.tier] ?? 2;
+          const tb = TIER_ORDER[b.tier] ?? 2;
+          if (ta !== tb) return ta - tb;
+          if (ta === 0) return a.balance - b.balance; // people: snowball
+          return b.apr - a.apr; // overdraft & other: avalanche-like by rate
+        });
+
+        for (const x of withMeta) {
+          if (remaining <= 0.005) break;
+          const add = Math.min(remaining, x.balance);
+          if (add <= 0.005) continue;
+          state.loans[x.i].monthlyPayment = round2(Number(state.loans[x.i].monthlyPayment) + add);
+          remaining = round2(remaining - add);
+        }
+      }
+
+      didInitPlannedDebts = true;
+    }
+
     savePlanner();
 
-    const sumPlanned = state.loans.filter((l) => Number(l.balance) > 0).reduce((s, l) => s + (Number(l.monthlyPayment) || 0), 0);
-    const leftForDebt = income - mustPay;
+    const sumPlanned = state.loans.reduce((s, l) => s + (Number(l.monthlyPayment) || 0), 0);
     const snapIn = el("snapIncome");
     if (snapIn) snapIn.textContent = moneyFull(income);
     const cashDebtEl = el("cashDebt");
@@ -1849,6 +2062,7 @@
     } else focusSec.classList.add("hidden");
 
     if (!opts.skipLoans) renderLoans();
+    if (!opts.skipPlannedDebts) renderPlannedDebtsCard();
     if (!opts.skipMoneyLines) {
       renderIncomeItems();
       renderBillItems();
@@ -2165,6 +2379,7 @@
 
     bindMoneyLineListsOnce();
     bindLoanListOnce();
+    bindPlannedDebtsOnce();
     bindMonthLogTableOnce();
     bindBusinessTableOnce();
     bindBusinessDraftOnce();

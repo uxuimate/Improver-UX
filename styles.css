@@ -1898,6 +1898,77 @@ input[type="number"]::-webkit-inner-spin-button {
   margin-bottom: 6px;
 }
 
+.planned-debts-card .hint {
+  margin-bottom: 10px;
+}
+
+.planned-debts-table-wrap {
+  margin-top: 8px;
+}
+
+.planned-debts-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.planned-debts-table th,
+.planned-debts-table td {
+  padding: 12px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.planned-debts-table th {
+  color: var(--muted);
+  font-weight: 600;
+  text-align: left;
+}
+
+.planned-debts-table td:nth-child(1) {
+  width: auto;
+}
+
+.planned-debts-table td:nth-child(2) {
+  width: 7.5rem;
+}
+
+.planned-debts-table td:nth-child(3) {
+  width: 5.5rem;
+  text-align: right;
+}
+
+.planned-debt-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.planned-debt-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-weight: 800;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+}
+
+.planned-debt-input:focus {
+  box-shadow: inset 0 -1px 0 rgba(var(--mint-rgb), 0.42);
+}
+
+.planned-debt-status-btn {
+  min-height: 38px;
+  padding: 8px 12px;
+  border-radius: 12px;
+}
+
 @media (max-width: 700px) {
   .bill-lines-toolbar {
     grid-template-columns: 1fr;
