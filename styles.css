@@ -1382,7 +1382,9 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 .debts-pay-warn {
-  margin: 10px 0 0;
+  margin: 0;
+  margin-top: 10px;
+  padding: 12px 18px 16px;
   font-size: 0.8rem;
   color: var(--warning);
   line-height: 1.4;
@@ -1406,7 +1408,9 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 #panelDebts .debts-month-card .debts-pay-warn {
-  margin-top: 14px;
+  margin-top: 0;
+  padding: 16px 18px 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .debt-cards-stack {
@@ -1449,6 +1453,78 @@ input[type="number"]::-webkit-inner-spin-button {
     width: auto;
     align-self: flex-start;
   }
+}
+
+.debt-add-card .section-label {
+  margin-bottom: 0;
+}
+
+.debt-add-details {
+  margin: 0;
+}
+
+.debt-add-details__summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 2px 0 4px;
+  border-radius: 12px;
+  outline: none;
+}
+
+.debt-add-details__summary::-webkit-details-marker {
+  display: none;
+}
+
+.debt-add-details__summary:focus-visible {
+  box-shadow: 0 0 0 2px rgba(var(--mint-rgb), 0.45);
+}
+
+.debt-add-details__summary-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+  width: 100%;
+  position: relative;
+  padding-right: 28px;
+}
+
+.debt-add-details__summary-inner::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  margin-top: -3px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid rgba(255, 255, 255, 0.35);
+  transition: transform 0.18s ease;
+}
+
+.debt-add-details[open] .debt-add-details__summary-inner::after {
+  transform: rotate(180deg);
+}
+
+.debt-add-details__title.section-label {
+  margin-bottom: 0;
+}
+
+.debt-add-details__eyebrow {
+  margin: 0;
+  line-height: 1.35;
+}
+
+.debt-add-details__body {
+  padding-top: 14px;
+  margin-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.debt-add-details__body > .hint {
+  margin: 0 0 12px;
+  line-height: 1.45;
 }
 
 /* Debts tab: calmer control heights, iOS-like */
@@ -1980,12 +2056,143 @@ input[type="number"]::-webkit-inner-spin-button {
   margin-bottom: 6px;
 }
 
-.planned-debts-card .hint {
-  margin-bottom: 10px;
+.planned-debts-card .section-label {
+  margin-bottom: 0;
+}
+
+.planned-debt-details {
+  margin: 0;
+}
+
+.planned-debt-details__summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 2px 0 4px;
+  border-radius: 12px;
+  outline: none;
+}
+
+.planned-debt-details__summary::-webkit-details-marker {
+  display: none;
+}
+
+.planned-debt-details__summary:focus-visible {
+  box-shadow: 0 0 0 2px rgba(var(--mint-rgb), 0.45);
+}
+
+.planned-debt-details__summary-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+  width: 100%;
+  position: relative;
+  padding-right: 28px;
+}
+
+.planned-debt-details__summary-inner::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  margin-top: -3px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid rgba(255, 255, 255, 0.35);
+  transition: transform 0.18s ease;
+}
+
+.planned-debt-details[open] .planned-debt-details__summary-inner::after {
+  transform: rotate(180deg);
+}
+
+.planned-debt-details__title.section-label {
+  margin-bottom: 0;
+}
+
+.planned-debt-details__lead-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.planned-debt-details__lead-total strong {
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.planned-debt-details__eyebrow {
+  margin: 0;
+  line-height: 1.35;
+}
+
+.planned-debt-details__body {
+  padding-top: 14px;
+  margin-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.planned-debt-details__body > .hint {
+  margin: 0 0 12px;
+  line-height: 1.45;
 }
 
 .planned-debts-table-wrap {
   margin-top: 8px;
+}
+
+.planned-debt-add-toolbar {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px 14px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  align-items: end;
+}
+
+.planned-debt-add-field {
+  margin: 0;
+}
+
+.planned-debt-add-btn {
+  min-height: 44px;
+  justify-self: start;
+}
+
+@media (max-width: 599px) {
+  .planned-debt-add-btn {
+    width: 100%;
+    justify-self: stretch;
+  }
+}
+
+@media (min-width: 600px) {
+  .planned-debt-add-toolbar {
+    grid-template-columns: minmax(0, 1fr) 10rem auto;
+    gap: 12px 16px;
+  }
+
+  .planned-debt-add-btn {
+    justify-self: stretch;
+    margin-bottom: 1px;
+  }
+}
+
+#plannedDebtAddError {
+  margin: 10px 0 0;
+  font-size: 0.88rem;
+}
+
+#plannedDebtsEmpty {
+  margin: 12px 0 0;
 }
 
 .planned-debts-table {
@@ -2021,10 +2228,31 @@ input[type="number"]::-webkit-inner-spin-button {
   text-align: right;
 }
 
-.planned-debt-name {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.planned-debt-name-cell {
+  min-width: 0;
+  vertical-align: middle;
+}
+
+.planned-debt-name-input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-weight: 600;
+  outline: none;
+}
+
+.planned-debt-name-input:focus {
+  box-shadow: inset 0 -1px 0 rgba(var(--mint-rgb), 0.42);
+}
+
+.planned-debt-name-input::placeholder {
+  color: rgba(252, 250, 255, 0.35);
 }
 
 .planned-debt-input {
@@ -2045,10 +2273,34 @@ input[type="number"]::-webkit-inner-spin-button {
   box-shadow: inset 0 -1px 0 rgba(var(--mint-rgb), 0.42);
 }
 
-.planned-debt-status-btn {
-  min-height: 38px;
-  padding: 8px 12px;
-  border-radius: 12px;
+.planned-debt-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.planned-debt-status-pill svg.lucide {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.planned-debt-remove-btn {
+  vertical-align: middle;
+}
+
+.planned-debt-status-pill--done {
+  color: rgba(var(--mint-rgb), 1);
+}
+
+.planned-debt-status-pill--none {
+  color: rgba(252, 250, 255, 0.38);
+  font-weight: 500;
 }
 
 @media (max-width: 700px) {

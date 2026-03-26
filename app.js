@@ -615,6 +615,16 @@
     if (d && typeof shouldOpen === "boolean") d.open = shouldOpen;
   }
 
+  function setDebtAddDetailsOpen(shouldOpen) {
+    const d = el("debtAddDetails");
+    if (d && typeof shouldOpen === "boolean") d.open = shouldOpen;
+  }
+
+  function setPlannedDebtDetailsOpen(shouldOpen) {
+    const d = el("plannedDebtDetails");
+    if (d && typeof shouldOpen === "boolean") d.open = shouldOpen;
+  }
+
   function node(tag, className) {
     const n = document.createElement(tag);
     if (className) n.className = className;
@@ -802,14 +812,20 @@
       const paidThisYm = paymentsThisYmSum(loan, ymKey);
       const remainingPlanned = round2(Math.max(0, plannedTotal - paidThisYm));
       const remainingWhole = Math.max(0, Math.round(remainingPlanned));
-      const done = remainingWhole <= 0;
       const bal = Math.max(0, Number(loan.balance) || 0);
       const balWhole = Math.max(0, Math.floor(bal));
 
       const tr = node("tr");
       const tdName = node("td");
-      tdName.className = "planned-debt-name";
-      tdName.textContent = name;
+      tdName.className = "planned-debt-name-cell";
+      const nameInp = node("input", "planned-debt-name-input");
+      nameInp.type = "text";
+      nameInp.maxLength = 120;
+      nameInp.setAttribute("data-plan-name-i", String(i));
+      nameInp.setAttribute("aria-label", "Debt name");
+      nameInp.placeholder = "Name";
+      nameInp.value = loan.name || "";
+      tdName.appendChild(nameInp);
 
       const tdAmt = node("td");
       const inp = node("input", "planned-debt-input");
@@ -825,17 +841,33 @@
       const tdStatus = node("td");
       tdStatus.style.textAlign = "right";
 
-      const btn = node("button", "planned-debt-status-btn btn secondary btn-with-lucide");
-      btn.type = "button";
-      btn.setAttribute("data-plan-record", String(i));
-      btn.disabled = done || remainingWhole <= 0 || balWhole <= 0;
-      btn.setAttribute("aria-label", done ? `Planned payment complete for ${name}` : `Record planned payment for ${name}`);
-
-      const ix = node("i");
-      ix.setAttribute("data-lucide", "check");
-      btn.appendChild(ix);
-
-      tdStatus.appendChild(btn);
+      if (remainingWhole > 0) {
+        const del = node("button", "debt-payment-delete-btn btn-with-lucide planned-debt-remove-btn");
+        del.type = "button";
+        del.setAttribute(
+          "aria-label",
+          `Remove ${name} from your plan and debt list`
+        );
+        del.setAttribute("title", "Remove this debt entirely");
+        del.setAttribute("data-plan-remove-loan", String(i));
+        const icDel = node("i");
+        icDel.setAttribute("data-lucide", "trash-2");
+        del.appendChild(icDel);
+        tdStatus.appendChild(del);
+      } else {
+        const status = node("span", "planned-debt-status-pill");
+        if (paidThisYm > 0.005) {
+          status.classList.add("planned-debt-status-pill--done");
+          const ic = node("i");
+          ic.setAttribute("data-lucide", "check");
+          status.appendChild(ic);
+          status.appendChild(document.createTextNode(" Recorded"));
+        } else {
+          status.classList.add("planned-debt-status-pill--none");
+          status.textContent = "—";
+        }
+        tdStatus.appendChild(status);
+      }
       tr.append(tdName, tdAmt, tdStatus);
       tbody.appendChild(tr);
     });
@@ -847,6 +879,16 @@
     const tbody = el("plannedDebtsBody");
     if (!tbody || tbody.dataset.delegateBound) return;
     tbody.dataset.delegateBound = "1";
+
+    tbody.addEventListener("click", (e) => {
+      const delBtn = e.target.closest("[data-plan-remove-loan]");
+      if (!delBtn) return;
+      const i = Number(delBtn.getAttribute("data-plan-remove-loan"));
+      if (Number.isNaN(i) || !state.loans[i]) return;
+      state.loans.splice(i, 1);
+      savePlanner();
+      refresh();
+    });
 
     tbody.addEventListener("input", (e) => {
       const inp = e.target.closest(".planned-debt-input");
@@ -866,28 +908,76 @@
     });
 
     tbody.addEventListener("change", (e) => {
-      const inp = e.target.closest(".planned-debt-input");
-      if (!inp) return;
-      savePlanner();
-      refresh({ skipLoans: true });
+      const amtInp = e.target.closest(".planned-debt-input");
+      if (amtInp) {
+        savePlanner();
+        refresh({ skipLoans: true });
+        return;
+      }
+      const nameInp = e.target.closest(".planned-debt-name-input");
+      if (nameInp) {
+        const ix = Number(nameInp.getAttribute("data-plan-name-i"));
+        const loan = state.loans[ix];
+        if (loan) loan.name = String(nameInp.value || "").trim().slice(0, 120);
+        savePlanner();
+        refresh({ skipLoans: true });
+      }
     });
 
-    tbody.addEventListener("click", (e) => {
-      const btn = e.target.closest("[data-plan-record]");
-      if (!btn) return;
-      const i = Number(btn.getAttribute("data-plan-record"));
+    tbody.addEventListener("input", (e) => {
+      const inp = e.target.closest(".planned-debt-name-input");
+      if (!inp) return;
+      const i = Number(inp.getAttribute("data-plan-name-i"));
       const loan = state.loans[i];
       if (!loan) return;
-      const ymKey = ymKeyFromYmd(todayYmd());
-      const remainingPlanned = plannedRemainingForLoan(loan, ymKey);
-      const remainingWhole = Math.max(0, Math.round(remainingPlanned));
-      if (remainingWhole <= 0) return;
-      const bal = Math.max(0, Number(loan.balance) || 0);
-      if (bal <= 0.005) return;
-      if (recordLoanPayment(i, remainingWhole, "Planned debt payment", todayYmd())) {
-        savePlanner();
-        refresh();
+      loan.name = String(inp.value || "").trim().slice(0, 120);
+      savePlanner();
+    });
+  }
+
+  function bindPlannedDebtAddOnce() {
+    const btn = el("btnPlannedDebtAdd");
+    if (!btn || btn.dataset.bound) return;
+    btn.dataset.bound = "1";
+    btn.addEventListener("click", () => {
+      const errEl = el("plannedDebtAddError");
+      if (errEl) {
+        errEl.classList.add("hidden");
+        errEl.textContent = "";
       }
+      const nameInput = el("plannedDebtNewName");
+      const amtInput = el("plannedDebtNewAmt");
+      const name = (nameInput && nameInput.value ? nameInput.value : "").trim();
+      const whole = Math.max(0, Math.round(Number(amtInput && amtInput.value) || 0));
+      if (!name) {
+        if (errEl) {
+          errEl.textContent = "Enter a name for this debt.";
+          errEl.classList.remove("hidden");
+        }
+        setPlannedDebtDetailsOpen(true);
+        return;
+      }
+      if (whole <= 0) {
+        if (errEl) {
+          errEl.textContent = "Enter how much you plan to pay this month (whole pounds).";
+          errEl.classList.remove("hidden");
+        }
+        setPlannedDebtDetailsOpen(true);
+        return;
+      }
+      state.loans.push({
+        id: uid(),
+        name: name.slice(0, 120),
+        balance: whole,
+        apr: 0,
+        monthlyPayment: whole,
+        tier: "other",
+        payments: [],
+      });
+      if (nameInput) nameInput.value = "";
+      if (amtInput) amtInput.value = "";
+      savePlanner();
+      refresh();
     });
   }
 
@@ -1217,11 +1307,11 @@
     const planned = node("div", "debt-card-planned");
     if (mp <= 0.005 && paidThisYm <= 0.005) planned.classList.add("hidden");
     const pMain = node("p", "debt-card-planned-main");
-    if (remainingPlanned <= 0.005 && mp > 0.005) {
-      const planAmt = node("strong");
+    if (remainingPlanned <= 0.005 && mp > 0.005 && paidThisYm > 0.005) {
+      const paidAmtStrong = node("strong");
       pMain.append("You’ve paid ");
-      planAmt.textContent = moneyFull(mp);
-      pMain.append(planAmt, " this month toward this debt.");
+      paidAmtStrong.textContent = moneyFull(paidThisYm);
+      pMain.append(paidAmtStrong, " this month toward this debt.");
       planned.appendChild(pMain);
     } else if (mp <= 0.005 && paidThisYm > 0.005) {
       const paidAmt = node("strong");
@@ -2564,6 +2654,8 @@
     bindMoneyLineListsOnce();
     bindLoanListOnce();
     bindPlannedDebtsOnce();
+    bindPlannedDebtAddOnce();
+    el("plannedDebtDetails")?.addEventListener("toggle", () => paintIcons());
     bindMonthLogTableOnce();
     bindBusinessTableOnce();
     bindMonthTableSortingOnce();
@@ -2647,6 +2739,7 @@
           err.textContent = "Give this debt a name, you’ll thank yourself later.";
           err.classList.remove("hidden");
         }
+        setDebtAddDetailsOpen(true);
         return;
       }
       const balance = Math.max(0, Number(el("debtDraftBalance").value) || 0);
@@ -2668,6 +2761,7 @@
       el("debtDraftPayment").value = "";
       el("debtDraftTier").value = "other";
       savePlanner();
+      setDebtAddDetailsOpen(false);
       refresh();
     });
 

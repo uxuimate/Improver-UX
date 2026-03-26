@@ -137,30 +137,57 @@
         </section>
 
         <section class="card glass money-card planned-debts-card" aria-labelledby="planned-debts-heading">
-          <h2 id="planned-debts-heading" class="section-label section-label--with-icon">
-            <i data-lucide="banknote" aria-hidden="true"></i> Planned debt
-          </h2>
-          <p class="hint muted small" id="plannedDebtsHint">
-            Reserve what’s left after bills for debt payments. Edit amounts, then tick to record.
-          </p>
-          <div class="money-lines-total money-lines-total--planned-debts">
-            <span class="muted small">Planned this month</span>
-            <strong id="plannedDebtsTotal">£0.00</strong>
-          </div>
-
-          <div class="table-wrap planned-debts-table-wrap">
-            <table class="planned-debts-table" aria-label="Planned debt payments">
-              <thead>
-                <tr>
-                  <th>Debt</th>
-                  <th>Planned (£)</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="plannedDebtsBody"></tbody>
-            </table>
-            <p class="muted small hidden" id="plannedDebtsEmpty">Add debts on the Debts tab to see planned payments.</p>
-          </div>
+          <details class="planned-debt-details" id="plannedDebtDetails">
+            <summary class="planned-debt-details__summary">
+              <span class="planned-debt-details__summary-inner">
+                <span id="planned-debts-heading" class="section-label section-label--with-icon planned-debt-details__title"
+                role="heading" aria-level="2">
+                  <i data-lucide="banknote" aria-hidden="true"></i> Planned debt
+                </span>
+                <div class="planned-debt-details__lead-total">
+                  <span class="muted small">Planned this month</span>
+                  <strong id="plannedDebtsTotal">£0</strong>
+                </div>
+                <span class="muted small planned-debt-details__eyebrow">Open to edit your plan and add debts</span>
+              </span>
+            </summary>
+            <div class="planned-debt-details__body">
+              <p class="hint muted small" id="plannedDebtsHint">
+                Add a debt and planned amount below (or edit names and amounts in the table). On <strong>Debts</strong>, use
+                the tick next to <strong>Planned (this month)</strong> when you’ve actually paid—that lowers the balance.
+              </p>
+              <div class="table-wrap planned-debts-table-wrap">
+                <table class="planned-debts-table" aria-label="Planned debt payments">
+                  <thead>
+                    <tr>
+                      <th>Debt</th>
+                      <th>Planned (£)</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="plannedDebtsBody"></tbody>
+                </table>
+                <p class="pay-debt-error hidden" id="plannedDebtAddError" role="alert"></p>
+                <div class="planned-debt-add-toolbar">
+                  <label class="field planned-debt-add-field planned-debt-add-field--name">
+                    <span class="field-label">Debt name</span>
+                    <input type="text" id="plannedDebtNewName" maxlength="120" placeholder="e.g. Krasi, overdraft"
+                    autocomplete="off" />
+                  </label>
+                  <label class="field planned-debt-add-field planned-debt-add-field--amt">
+                    <span class="field-label">Planned this month (£)</span>
+                    <input type="number" id="plannedDebtNewAmt" min="0" step="1" inputmode="numeric" placeholder="0" />
+                  </label>
+                  <button type="button" class="btn secondary small-btn btn-with-lucide planned-debt-add-btn"
+                  id="btnPlannedDebtAdd">
+                    <i data-lucide="plus"></i> Add to plan
+                  </button>
+                </div>
+                <p class="muted small hidden" id="plannedDebtsEmpty">No debts in your plan yet—use the form above, or add
+                  full details on the Debts tab.</p>
+              </div>
+            </div>
+          </details>
         </section>
 
         <section class="card glass money-card" aria-labelledby="months-log-heading">
@@ -209,42 +236,52 @@
         </section>
 
         <section class="card glass money-card debt-add-card" aria-labelledby="debt-add-heading">
-          <h2 id="debt-add-heading" class="section-label section-label--with-icon">
-            <i data-lucide="plus-circle" aria-hidden="true"></i> Add a debt
-          </h2>
-          <p class="hint muted small">Fill this in, then <strong>Add to my list</strong>. It becomes a card you can
-            edit, pay down, or remove anytime.</p>
-          <div class="debt-add-grid">
-            <label class="field full">
-              <span class="field-label">Who or what you owe</span>
-              <input type="text" id="debtDraftName" maxlength="120" placeholder="e.g. Mum, Monzo overdraft, PayPal"
-              autocomplete="off" />
-            </label>
-            <label class="field">
-              <span class="field-label">Balance left (£)</span>
-              <input type="number" id="debtDraftBalance" min="0" step="0.01" inputmode="decimal" placeholder="0" />
-            </label>
-            <label class="field">
-              <span class="field-label">Interest rate % (0 if none)</span>
-              <input type="number" id="debtDraftApr" min="0" step="0.1" inputmode="decimal" placeholder="0" />
-            </label>
-            <label class="field full">
-              <span class="field-label">Payment this month (£)</span>
-              <input type="number" id="debtDraftPayment" min="0" step="0.01" inputmode="decimal" placeholder="0" />
-            </label>
-            <label class="field full">
-              <span class="field-label">Type (affects payoff order)</span>
-              <select id="debtDraftTier">
-                <option value="people">Someone you know (friend, family…)</option>
-                <option value="overdraft">Overdraft or bank line</option>
-                <option value="other" selected>Card, loan, Buy Now Pay Later…</option>
-              </select>
-            </label>
-          </div>
-          <p class="pay-debt-error hidden" id="debtDraftError" role="alert"></p>
-          <button type="button" class="btn primary btn-with-lucide debt-add-submit" id="btnCommitLoan">
-            <i data-lucide="check"></i> Add to my list
-          </button>
+          <details class="debt-add-details" id="debtAddDetails">
+            <summary class="debt-add-details__summary">
+              <span class="debt-add-details__summary-inner">
+                <span id="debt-add-heading" class="section-label section-label--with-icon debt-add-details__title"
+                role="heading" aria-level="2">
+                  <i data-lucide="plus-circle" aria-hidden="true"></i> Add a debt
+                </span>
+                <span class="muted small debt-add-details__eyebrow">Open to enter a new debt</span>
+              </span>
+            </summary>
+            <div class="debt-add-details__body">
+              <p class="hint muted small">Fill this in, then <strong>Add to my list</strong>. It becomes a card you can
+                edit, pay down, or remove anytime.</p>
+              <div class="debt-add-grid">
+                <label class="field full">
+                  <span class="field-label">Who or what you owe</span>
+                  <input type="text" id="debtDraftName" maxlength="120" placeholder="e.g. Mum, Monzo overdraft, PayPal"
+                  autocomplete="off" />
+                </label>
+                <label class="field">
+                  <span class="field-label">Balance left (£)</span>
+                  <input type="number" id="debtDraftBalance" min="0" step="0.01" inputmode="decimal" placeholder="0" />
+                </label>
+                <label class="field">
+                  <span class="field-label">Interest rate % (0 if none)</span>
+                  <input type="number" id="debtDraftApr" min="0" step="0.1" inputmode="decimal" placeholder="0" />
+                </label>
+                <label class="field full">
+                  <span class="field-label">Payment this month (£)</span>
+                  <input type="number" id="debtDraftPayment" min="0" step="0.01" inputmode="decimal" placeholder="0" />
+                </label>
+                <label class="field full">
+                  <span class="field-label">Type (affects payoff order)</span>
+                  <select id="debtDraftTier">
+                    <option value="people">Someone you know (friend, family…)</option>
+                    <option value="overdraft">Overdraft or bank line</option>
+                    <option value="other" selected>Card, loan, Buy Now Pay Later…</option>
+                  </select>
+                </label>
+              </div>
+              <p class="pay-debt-error hidden" id="debtDraftError" role="alert"></p>
+              <button type="button" class="btn primary btn-with-lucide debt-add-submit" id="btnCommitLoan">
+                <i data-lucide="check"></i> Add to my list
+              </button>
+            </div>
+          </details>
         </section>
 
         <div id="loanList" class="debt-cards-stack" aria-live="polite"></div>
