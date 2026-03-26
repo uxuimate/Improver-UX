@@ -41,6 +41,9 @@
   /** When editing latest business month, holds the removed entry until save or cancel. */
   let businessEditBackup = null;
 
+  let monthLogSortDir = "desc";
+  let businessMonthSortDir = "desc";
+
   function uid() {
     return crypto.randomUUID();
   }
@@ -759,7 +762,7 @@
 
     const ymKey = ymKeyFromYmd(todayYmd());
     const sumPlanned = state.loans.reduce((s, l) => s + (Number(l.monthlyPayment) || 0), 0);
-    totalEl.textContent = moneyFull(sumPlanned);
+    totalEl.textContent = money(Math.round(sumPlanned));
 
     tbody.replaceChildren();
 
@@ -788,8 +791,10 @@
       const plannedTotal = Math.max(0, Number(loan.monthlyPayment) || 0);
       const paidThisYm = paymentsThisYmSum(loan, ymKey);
       const remainingPlanned = round2(Math.max(0, plannedTotal - paidThisYm));
-      const done = remainingPlanned <= 0.005;
+      const remainingWhole = Math.max(0, Math.round(remainingPlanned));
+      const done = remainingWhole <= 0;
       const bal = Math.max(0, Number(loan.balance) || 0);
+      const balWhole = Math.max(0, Math.floor(bal));
 
       const tr = node("tr");
       const tdName = node("td");
@@ -799,10 +804,10 @@
       const tdAmt = node("td");
       const inp = node("input", "planned-debt-input");
       inp.type = "number";
-      inp.step = "0.01";
+      inp.step = "1";
       inp.min = "0";
-      inp.max = String(round2(bal));
-      inp.value = String(remainingPlanned.toFixed(2));
+      inp.max = String(balWhole);
+      inp.value = String(remainingWhole);
       inp.setAttribute("data-plan-i", String(i));
       inp.setAttribute("aria-label", `Planned payment for ${name}`);
       tdAmt.appendChild(inp);
@@ -813,7 +818,7 @@
       const btn = node("button", "planned-debt-status-btn btn secondary btn-with-lucide");
       btn.type = "button";
       btn.setAttribute("data-plan-record", String(i));
-      btn.disabled = done || remainingPlanned <= 0.005 || bal <= 0.005;
+      btn.disabled = done || remainingWhole <= 0 || balWhole <= 0;
       btn.setAttribute("aria-label", done ? `Planned payment complete for ${name}` : `Record planned payment for ${name}`);
 
       const ix = node("i");
@@ -841,10 +846,11 @@
       if (!loan) return;
       const ymKey = ymKeyFromYmd(todayYmd());
       const paidThisYm = paymentsThisYmSum(loan, ymKey);
-      const newRemaining = round2(Math.max(0, Number(inp.value) || 0));
       const bal = Math.max(0, Number(loan.balance) || 0);
-      const clampedRemaining = round2(Math.min(newRemaining, bal));
-      loan.monthlyPayment = round2(paidThisYm + clampedRemaining);
+      const balWhole = Math.max(0, Math.floor(bal));
+      const newRemainingWhole = Math.max(0, Math.round(Number(inp.value) || 0));
+      const clampedRemainingWhole = Math.min(newRemainingWhole, balWhole);
+      loan.monthlyPayment = round2(paidThisYm + clampedRemainingWhole);
       savePlanner();
       // Don't call refresh on every keystroke; avoids fighting focus.
     });
@@ -864,10 +870,11 @@
       if (!loan) return;
       const ymKey = ymKeyFromYmd(todayYmd());
       const remainingPlanned = plannedRemainingForLoan(loan, ymKey);
-      if (remainingPlanned <= 0.005) return;
+      const remainingWhole = Math.max(0, Math.round(remainingPlanned));
+      if (remainingWhole <= 0) return;
       const bal = Math.max(0, Number(loan.balance) || 0);
       if (bal <= 0.005) return;
-      if (recordLoanPayment(i, remainingPlanned, "Planned debt payment", todayYmd())) {
+      if (recordLoanPayment(i, remainingWhole, "Planned debt payment", todayYmd())) {
         savePlanner();
         refresh();
       }
@@ -1226,6 +1233,17 @@
       planned.append(pMain, pSub);
     }
 
+    // Planned deletion: remove any remaining planned amount for this month (recorded payments stay).
+    if (!paidOff && remainingPlanned > 0.005) {
+      const clearBtn = node("button", "debt-clear-planned btn secondary small-btn btn-with-lucide");
+      clearBtn.type = "button";
+      clearBtn.setAttribute("data-clear-planned", String(index));
+      const ci = node("i");
+      ci.setAttribute("data-lucide", "trash-2");
+      clearBtn.append(ci, document.createTextNode(" Clear planned"));
+      planned.appendChild(clearBtn);
+    }
+
     const tierLab = node("label", "field loan-tier debt-card-tier");
     const tierSpan = node("span", "field-label");
     tierSpan.textContent = "Type (changes suggested payoff order)";
@@ -1285,9 +1303,22 @@
       sum.textContent = `Payments you’ve recorded (${payments.length})`;
       const ul = node("ul", "debt-payment-log__list");
       payments.slice(0, 20).forEach((p) => {
-        const li = node("li");
+        const li = node("li", "debt-payment-row");
         const notePart = p.note ? ` · ${p.note}` : "";
-        li.textContent = `${formatShortDate(p.at)} · ${moneyFull(p.amount)}${notePart}`;
+        const txt = node("span", "debt-payment-row__text");
+        txt.textContent = `${formatShortDate(p.at)} · ${moneyFull(p.amount)}${notePart}`;
+        li.appendChild(txt);
+
+        const del = node("button", "debt-payment-delete-btn");
+        del.type = "button";
+        del.setAttribute("aria-label", "Delete this recorded payment");
+        del.setAttribute("data-pay-del-loan", String(index));
+        del.setAttribute("data-pay-del", String(p.id || ""));
+        const ix = node("i");
+        ix.setAttribute("data-lucide", "trash-2");
+        del.appendChild(ix);
+        li.appendChild(del);
+
         ul.appendChild(li);
       });
       det.append(sum, ul);
@@ -1355,6 +1386,31 @@
         refresh();
         return;
       }
+
+      const clearPlannedBtn = e.target.closest("[data-clear-planned]");
+      if (clearPlannedBtn) {
+        const loanIndex = Number(clearPlannedBtn.getAttribute("data-clear-planned"));
+        const loan = state.loans[loanIndex];
+        if (!loan) return;
+        const ymKey = ymKeyFromYmd(todayYmd());
+        const paidThisYm = paymentsThisYmSum(loan, ymKey);
+        loan.monthlyPayment = round2(paidThisYm);
+        savePlanner();
+        refresh();
+        return;
+      }
+
+      const delPayBtn = e.target.closest("[data-pay-del]");
+      if (delPayBtn) {
+        const loanIndex = Number(delPayBtn.getAttribute("data-pay-del-loan"));
+        const paymentId = delPayBtn.getAttribute("data-pay-del");
+        if (deleteLoanPayment(loanIndex, paymentId)) {
+          savePlanner();
+          refresh();
+        }
+        return;
+      }
+
       const pr = e.target.closest("[data-pay-record]");
       if (pr) {
         openPayDebtModal(Number(pr.getAttribute("data-pay-record")));
@@ -1412,6 +1468,36 @@
       savePlanner();
       renderBusinessLog();
     });
+  }
+
+  function bindMonthTableSortingOnce() {
+    const monthTable = el("monthLogTable");
+    if (monthTable && !monthTable.dataset.sortBound) {
+      monthTable.dataset.sortBound = "1";
+      if (!monthTable.dataset.sortDir) monthTable.dataset.sortDir = monthLogSortDir;
+      const th = monthTable.querySelector("thead th:first-child");
+      if (th) {
+        th.addEventListener("click", () => {
+          monthLogSortDir = monthTable.dataset.sortDir === "asc" ? "desc" : "asc";
+          monthTable.dataset.sortDir = monthLogSortDir;
+          renderMonthLog();
+        });
+      }
+    }
+
+    const businessTable = el("businessMonthTable");
+    if (businessTable && !businessTable.dataset.sortBound) {
+      businessTable.dataset.sortBound = "1";
+      if (!businessTable.dataset.sortDir) businessTable.dataset.sortDir = businessMonthSortDir;
+      const th = businessTable.querySelector("thead th:first-child");
+      if (th) {
+        th.addEventListener("click", () => {
+          businessMonthSortDir = businessTable.dataset.sortDir === "asc" ? "desc" : "asc";
+          businessTable.dataset.sortDir = businessMonthSortDir;
+          renderBusinessLog();
+        });
+      }
+    }
   }
 
   function paintIcons() {
@@ -1594,6 +1680,17 @@
     return true;
   }
 
+  function deleteLoanPayment(loanIndex, paymentId) {
+    const loan = state.loans[loanIndex];
+    if (!loan || !Array.isArray(loan.payments) || !paymentId) return false;
+    const idx = loan.payments.findIndex((p) => p && p.id === paymentId);
+    if (idx < 0) return false;
+    const amt = Math.max(0, Number(loan.payments[idx]?.amount) || 0);
+    loan.payments.splice(idx, 1);
+    loan.balance = round2(Math.max(0, Number(loan.balance) || 0) + amt);
+    return true;
+  }
+
   function openPayDebtModal(index) {
     const loan = state.loans[index];
     if (!loan) return;
@@ -1755,6 +1852,28 @@
     return true;
   }
 
+  function monthLabelToYymm(label) {
+    const s = String(label || "").trim();
+    if (!s) return null;
+    // yyyy-mm
+    const m1 = s.match(/^(\d{4})-(\d{1,2})$/);
+    if (m1) {
+      const y = Number(m1[1]);
+      const mo = Number(m1[2]);
+      if (Number.isFinite(y) && Number.isFinite(mo) && mo >= 1 && mo <= 12) return y * 100 + mo;
+    }
+    // e.g. March 2026
+    const m2 = s.match(/^([A-Za-z]{3,9})\s+(\d{4})$/);
+    if (m2) {
+      const mon = m2[1].slice(0, 3).toLowerCase();
+      const year = Number(m2[2]);
+      const map = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+      const mo = map[mon];
+      if (mo && Number.isFinite(year)) return year * 100 + mo;
+    }
+    return null;
+  }
+
   function renderMonthLog() {
     const tbody = el("monthLogBody");
     const empty = el("monthLogEmpty");
@@ -1765,9 +1884,16 @@
       return;
     }
     if (empty) empty.classList.add("hidden");
-    state.monthLog.forEach((m, index) => {
-      tbody.appendChild(buildMonthLogRow(m, index));
+
+    const dir = monthLogSortDir === "asc" ? 1 : -1;
+    const monthRows = state.monthLog.map((m, index) => ({ m, index }));
+    monthRows.sort((a, b) => {
+      const am = monthLabelToYymm(a.m.label);
+      const bm = monthLabelToYymm(b.m.label);
+      if (am != null && bm != null) return dir * (am - bm);
+      return dir * String(a.m.label || "").localeCompare(String(b.m.label || ""));
     });
+    monthRows.forEach(({ m, index }) => tbody.appendChild(buildMonthLogRow(m, index)));
     paintIcons();
   }
 
@@ -1832,9 +1958,16 @@
       return;
     }
     if (empty) empty.classList.add("hidden");
-    state.businessLog.forEach((m, index) => {
-      tbody.appendChild(buildBusinessLogRows(m, index));
+
+    const dir = businessMonthSortDir === "asc" ? 1 : -1;
+    const monthRows = state.businessLog.map((m, index) => ({ m, index }));
+    monthRows.sort((a, b) => {
+      const am = monthLabelToYymm(a.m.label);
+      const bm = monthLabelToYymm(b.m.label);
+      if (am != null && bm != null) return dir * (am - bm);
+      return dir * String(a.m.label || "").localeCompare(String(b.m.label || ""));
     });
+    monthRows.forEach(({ m, index }) => tbody.appendChild(buildBusinessLogRows(m, index)));
     paintIcons();
   }
 
@@ -1918,12 +2051,13 @@
     const sumPlannedBefore = state.loans.reduce((s, l) => s + (Number(l.monthlyPayment) || 0), 0);
     if (state.loans.length && sumPlannedBefore <= 0.005) {
       const paidTotal = state.loans.reduce((s, l) => s + paymentsThisYmSum(l, ymKey), 0);
+      const paidTotalWhole = Math.round(paidTotal);
       state.loans.forEach((l) => {
-        l.monthlyPayment = paymentsThisYmSum(l, ymKey);
+        l.monthlyPayment = Math.round(paymentsThisYmSum(l, ymKey));
       });
 
-      let remaining = round2(leftForDebt - paidTotal);
-      if (remaining > 0.005) {
+      let remaining = Math.round(leftForDebt - paidTotalWhole);
+      if (remaining > 0) {
         const withMeta = state.loans.map((l, i) => ({
           i,
           tier: normalizeTier(l.tier),
@@ -1941,11 +2075,12 @@
         });
 
         for (const x of withMeta) {
-          if (remaining <= 0.005) break;
-          const add = Math.min(remaining, x.balance);
-          if (add <= 0.005) continue;
-          state.loans[x.i].monthlyPayment = round2(Number(state.loans[x.i].monthlyPayment) + add);
-          remaining = round2(remaining - add);
+          if (remaining <= 0) break;
+          const xBalWhole = Math.max(0, Math.floor(x.balance));
+          const add = Math.min(remaining, xBalWhole);
+          if (add <= 0) continue;
+          state.loans[x.i].monthlyPayment = Math.round(Number(state.loans[x.i].monthlyPayment) + add);
+          remaining = remaining - add;
         }
       }
 
@@ -2382,6 +2517,7 @@
     bindPlannedDebtsOnce();
     bindMonthLogTableOnce();
     bindBusinessTableOnce();
+    bindMonthTableSortingOnce();
     bindBusinessDraftOnce();
     resetBusinessDraft();
 

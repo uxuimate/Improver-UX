@@ -1572,6 +1572,9 @@ input[type="number"]::-webkit-inner-spin-button {
   border: 1px solid rgba(var(--blue-rgb), 0.18);
   font-size: 0.88rem;
   line-height: 1.45;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .debt-card-planned-main {
@@ -1701,6 +1704,58 @@ input[type="number"]::-webkit-inner-spin-button {
 
 .debt-payment-log__list li {
   margin-bottom: 6px;
+}
+
+.debt-payment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.debt-payment-row__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.debt-payment-delete-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  background: transparent;
+  border: 1px solid rgba(var(--warning-rgb), 0.35);
+  color: var(--warning);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.debt-payment-delete-btn:hover {
+  background: rgba(var(--warning-rgb), 0.12);
+  border-color: rgba(var(--warning-rgb), 0.48);
+}
+
+.debt-payment-delete-btn:active {
+  transform: scale(0.98);
+}
+
+.debt-payment-delete-btn svg.lucide {
+  width: 16px;
+  height: 16px;
+}
+
+.debt-clear-planned {
+  margin-top: 2px;
+  align-self: flex-start;
+  padding: 8px 12px;
+  min-height: 36px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  gap: 6px;
 }
 
 /* Collapsed by default — recording a payment doesn’t surface edit fields */
@@ -2279,6 +2334,12 @@ input.bill-line-date::-webkit-calendar-picker-indicator {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
+}
+
+#monthLogTable thead th:first-child,
+#businessMonthTable thead th:first-child {
+  cursor: pointer;
+  user-select: none;
 }
 
 .month-table th,
