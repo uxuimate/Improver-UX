@@ -1718,6 +1718,42 @@ input[type="number"]::-webkit-inner-spin-button {
   min-width: 0;
 }
 
+.debt-payment-row__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.debt-payment-complete-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  background: rgba(var(--mint-rgb), 0.12);
+  border: 1px solid rgba(var(--mint-rgb), 0.35);
+  color: var(--mint);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.debt-payment-complete-btn:hover {
+  background: rgba(var(--mint-rgb), 0.18);
+  border-color: rgba(var(--mint-rgb), 0.48);
+}
+
+.debt-payment-complete-btn:active {
+  transform: scale(0.98);
+}
+
+.debt-payment-complete-btn svg.lucide {
+  width: 16px;
+  height: 16px;
+}
+
 .debt-payment-delete-btn {
   width: 32px;
   height: 32px;

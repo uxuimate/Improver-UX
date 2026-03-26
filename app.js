@@ -1283,14 +1283,7 @@
       const i1 = node("i");
       i1.setAttribute("data-lucide", "banknote");
       b1.append(i1, document.createTextNode(" Record payment"));
-      const b2 = node("button", "btn secondary btn-with-lucide");
-      b2.type = "button";
-      b2.setAttribute("data-pay-planned", String(index));
-      if (plannedApply <= 0) b2.disabled = true;
-      const i2 = node("i");
-      i2.setAttribute("data-lucide", "zap");
-      b2.append(i2, document.createTextNode(` Use planned amount (${moneyFull(plannedApply)})`));
-      actions.append(b1, b2);
+      actions.append(b1);
       article.appendChild(actions);
     }
 
@@ -1315,7 +1308,16 @@
         const li = node("li", "debt-payment-row");
         const txt = node("span", "debt-payment-row__text");
         txt.textContent = `Planned (this month) · ${money(remainingWhole)}`;
-        li.appendChild(txt);
+        const actions = node("div", "debt-payment-row__actions");
+
+        const tick = node("button", "debt-payment-complete-btn btn-with-lucide");
+        tick.type = "button";
+        tick.setAttribute("aria-label", "Mark planned payment as paid");
+        tick.setAttribute("data-pay-plan-complete-loan", String(index));
+        const ix1 = node("i");
+        ix1.setAttribute("data-lucide", "check");
+        tick.appendChild(ix1);
+        actions.appendChild(tick);
 
         const del = node("button", "debt-payment-delete-btn");
         del.type = "button";
@@ -1324,7 +1326,9 @@
         const ix = node("i");
         ix.setAttribute("data-lucide", "trash-2");
         del.appendChild(ix);
-        li.appendChild(del);
+        actions.appendChild(del);
+
+        li.append(txt, actions);
 
         ul.appendChild(li);
       }
@@ -1422,7 +1426,7 @@
         if (!loan) return;
         const ymKey = ymKeyFromYmd(todayYmd());
         const paidThisYm = paymentsThisYmSum(loan, ymKey);
-        loan.monthlyPayment = round2(paidThisYm);
+        loan.monthlyPayment = round2(Math.round(paidThisYm));
         savePlanner();
         refresh();
         return;
@@ -1439,28 +1443,31 @@
         return;
       }
 
+      const planCompleteBtn = e.target.closest("[data-pay-plan-complete-loan]");
+      if (planCompleteBtn) {
+        const loanIndex = Number(planCompleteBtn.getAttribute("data-pay-plan-complete-loan"));
+        const loan = state.loans[loanIndex];
+        if (!loan) return;
+        const ymKey = ymKeyFromYmd(todayYmd());
+        const remainingPlanned = plannedRemainingForLoan(loan, ymKey);
+        const remainingWhole = Math.max(0, Math.round(remainingPlanned));
+        const bal = Math.max(0, Number(loan.balance) || 0);
+        const balWhole = Math.floor(bal);
+        const payWhole = Math.min(remainingWhole, balWhole);
+        if (payWhole <= 0) return;
+        if (recordLoanPayment(loanIndex, payWhole, "Planned debt payment", todayYmd())) {
+          savePlanner();
+          refresh();
+        }
+        return;
+      }
+
       const pr = e.target.closest("[data-pay-record]");
       if (pr) {
         openPayDebtModal(Number(pr.getAttribute("data-pay-record")));
         return;
       }
-      const pp = e.target.closest("[data-pay-planned]");
-      if (pp && !pp.disabled) {
-        const i = Number(pp.getAttribute("data-pay-planned"));
-        const loan = state.loans[i];
-        if (!loan) return;
-        const b = Math.max(0, Number(loan.balance) || 0);
-        const mPay = Math.max(0, Number(loan.monthlyPayment) || 0);
-        const ymKey = ymKeyFromYmd(todayYmd());
-        const paidThisYm = paymentsThisYmSum(loan, ymKey);
-        const remainingPlanned = round2(Math.max(0, mPay - paidThisYm));
-        const amt = round2(Math.min(remainingPlanned, b));
-        if (amt <= 0) return;
-        if (recordLoanPayment(i, amt, "Planned monthly payment")) {
-          savePlanner();
-          refresh();
-        }
-      }
+      // No automatic "use planned amount" action: planned -> paid happens only via tick.
     });
     list.addEventListener("input", (e) => {
       if (e.target.matches("input[data-k], select[data-k]")) onLoanFieldChange(e);
