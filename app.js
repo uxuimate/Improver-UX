@@ -44,6 +44,9 @@
   let monthLogSortDir = "desc";
   let businessMonthSortDir = "desc";
 
+  let incomeDateSortDir = "desc";
+  let billDateSortDir = "desc";
+
   function uid() {
     return crypto.randomUUID();
   }
@@ -70,12 +73,13 @@
     return db.localeCompare(da);
   }
 
-  function sortedLineItemDisplayOrder(items) {
+  function sortedLineItemDisplayOrder(items, dir = "desc") {
     return items
       .map((row, i) => ({ row, i }))
       .sort((a, b) => {
-        const c = compareLineItemDateDesc(a.row.date, b.row.date);
-        return c !== 0 ? c : a.i - b.i;
+        const cDesc = compareLineItemDateDesc(a.row.date, b.row.date);
+        const order = dir === "asc" ? -cDesc : cDesc;
+        return order !== 0 ? order : a.i - b.i;
       });
   }
 
@@ -1239,17 +1243,6 @@
       planned.append(pMain, pSub);
     }
 
-    // Planned deletion: remove any remaining planned amount for this month (recorded payments stay).
-    if (!paidOff && remainingPlanned > 0.005) {
-      const clearBtn = node("button", "debt-clear-planned btn secondary small-btn btn-with-lucide");
-      clearBtn.type = "button";
-      clearBtn.setAttribute("data-clear-planned", String(index));
-      const ci = node("i");
-      ci.setAttribute("data-lucide", "trash-2");
-      clearBtn.append(ci, document.createTextNode(" Clear planned"));
-      planned.appendChild(clearBtn);
-    }
-
     const tierLab = node("label", "field loan-tier debt-card-tier");
     const tierSpan = node("span", "field-label");
     tierSpan.textContent = "Type (changes suggested payoff order)";
@@ -1303,11 +1296,39 @@
 
     article.appendChild(detailsDebt);
 
-    if (payments.length > 0) {
+    const showPlannedRow = !paidOff && remainingPlanned > 0.005;
+    if (showPlannedRow || payments.length > 0) {
       const det = node("details", "debt-payment-log");
       const sum = node("summary", "debt-payment-log__summary");
-      sum.textContent = `Payments you’ve recorded (${payments.length})`;
+      if (showPlannedRow && payments.length > 0) {
+        sum.textContent = `Planned & recorded payments (${payments.length} recorded)`;
+      } else if (showPlannedRow) {
+        sum.textContent = "Planned payment for this month";
+      } else {
+        sum.textContent = `Payments you’ve recorded (${payments.length})`;
+      }
+
       const ul = node("ul", "debt-payment-log__list");
+
+      if (showPlannedRow) {
+        const remainingWhole = Math.max(0, Math.round(remainingPlanned));
+        const li = node("li", "debt-payment-row");
+        const txt = node("span", "debt-payment-row__text");
+        txt.textContent = `Planned (this month) · ${money(remainingWhole)}`;
+        li.appendChild(txt);
+
+        const del = node("button", "debt-payment-delete-btn");
+        del.type = "button";
+        del.setAttribute("aria-label", "Clear planned payment for this month");
+        del.setAttribute("data-pay-del-planned-loan", String(index));
+        const ix = node("i");
+        ix.setAttribute("data-lucide", "trash-2");
+        del.appendChild(ix);
+        li.appendChild(del);
+
+        ul.appendChild(li);
+      }
+
       payments.slice(0, 20).forEach((p) => {
         const li = node("li", "debt-payment-row");
         const notePart = p.note ? ` · ${p.note}` : "";
@@ -1327,6 +1348,7 @@
 
         ul.appendChild(li);
       });
+
       det.append(sum, ul);
       article.appendChild(det);
     }
@@ -1393,9 +1415,9 @@
         return;
       }
 
-      const clearPlannedBtn = e.target.closest("[data-clear-planned]");
-      if (clearPlannedBtn) {
-        const loanIndex = Number(clearPlannedBtn.getAttribute("data-clear-planned"));
+      const delPlannedBtn = e.target.closest("[data-pay-del-planned-loan]");
+      if (delPlannedBtn) {
+        const loanIndex = Number(delPlannedBtn.getAttribute("data-pay-del-planned-loan"));
         const loan = state.loans[loanIndex];
         if (!loan) return;
         const ymKey = ymKeyFromYmd(todayYmd());
@@ -1551,12 +1573,19 @@
     hAmt.textContent = "Amount";
     const hDate = node("span", "money-lines-head-cell money-lines-head-cell--date");
     hDate.textContent = "Date";
+    hDate.setAttribute("role", "button");
+    hDate.tabIndex = 0;
+    hDate.setAttribute("aria-label", "Sort expenses by date");
+    hDate.addEventListener("click", () => {
+      billDateSortDir = billDateSortDir === "asc" ? "desc" : "asc";
+      renderBillItems();
+    });
     const hStatus = node("span", "money-lines-head-cell money-lines-head-cell--status");
     hStatus.textContent = "Status";
     head.append(hName, hAmt, hDate, hStatus);
     list.appendChild(head);
 
-    sortedLineItemDisplayOrder(state.incomeItems).forEach(({ row, i: index }) => {
+    sortedLineItemDisplayOrder(state.incomeItems, incomeDateSortDir).forEach(({ row, i: index }) => {
       list.appendChild(buildMoneyLineRow(row, index, "income", "data-ii", "data-income-del"));
     });
     const sumEl = el("incomeItemsSum");
@@ -1590,12 +1619,19 @@
     hAmt.textContent = "Amount";
     const hDate = node("span", "money-lines-head-cell money-lines-head-cell--date");
     hDate.textContent = "Date";
+    hDate.setAttribute("role", "button");
+    hDate.tabIndex = 0;
+    hDate.setAttribute("aria-label", "Sort income by date");
+    hDate.addEventListener("click", () => {
+      incomeDateSortDir = incomeDateSortDir === "asc" ? "desc" : "asc";
+      renderIncomeItems();
+    });
     const hStatus = node("span", "money-lines-head-cell money-lines-head-cell--status");
     hStatus.textContent = "Status";
     head.append(hName, hAmt, hDate, hStatus);
     list.appendChild(head);
 
-    sortedLineItemDisplayOrder(state.billItems).forEach(({ row: b, i: index }) => {
+    sortedLineItemDisplayOrder(state.billItems, billDateSortDir).forEach(({ row: b, i: index }) => {
       list.appendChild(buildMoneyLineRow(b, index, "bill", "data-i", "data-bill-del"));
     });
     const sumEl = el("billItemsSum");

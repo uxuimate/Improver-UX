@@ -1747,16 +1747,6 @@ input[type="number"]::-webkit-inner-spin-button {
   height: 16px;
 }
 
-.debt-clear-planned {
-  margin-top: 2px;
-  align-self: flex-start;
-  padding: 8px 12px;
-  min-height: 36px;
-  border-radius: 999px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  gap: 6px;
-}
 
 /* Collapsed by default — recording a payment doesn’t surface edit fields */
 .debt-card-details {
@@ -1930,6 +1920,7 @@ input[type="number"]::-webkit-inner-spin-button {
 
 .money-lines-head-cell--date {
   text-align: right;
+  cursor: pointer;
 }
 
 .money-lines-total {
