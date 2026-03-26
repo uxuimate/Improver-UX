@@ -38,6 +38,8 @@
 
   let chartInstance = null;
   let authTab = "signin";
+  /** When editing latest business month, holds the removed entry until save or cancel. */
+  let businessEditBackup = null;
 
   function uid() {
     return crypto.randomUUID();
@@ -45,6 +47,42 @@
 
   function round2(n) {
     return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+  }
+
+  /** Parse typed amounts (e.g. 19.99, 19,99) for business draft text inputs. */
+  function parseBusinessAmountInput(raw) {
+    if (raw == null) return 0;
+    const s = String(raw).trim().replace(",", ".");
+    if (!s) return 0;
+    const n = parseFloat(s);
+    return Number.isFinite(n) && n >= 0 ? round2(n) : 0;
+  }
+
+  function compareLineItemDateDesc(dateA, dateB) {
+    const da = dateA && /^\d{4}-\d{2}-\d{2}$/.test(String(dateA).slice(0, 10)) ? String(dateA).slice(0, 10) : "";
+    const db = dateB && /^\d{4}-\d{2}-\d{2}$/.test(String(dateB).slice(0, 10)) ? String(dateB).slice(0, 10) : "";
+    if (!da && !db) return 0;
+    if (!da) return 1;
+    if (!db) return -1;
+    return db.localeCompare(da);
+  }
+
+  function sortedLineItemDisplayOrder(items) {
+    return items
+      .map((row, i) => ({ row, i }))
+      .sort((a, b) => {
+        const c = compareLineItemDateDesc(a.row.date, b.row.date);
+        return c !== 0 ? c : a.i - b.i;
+      });
+  }
+
+  function sortMoneyItemsByDateDesc(arr) {
+    if (!Array.isArray(arr)) return;
+    arr.sort((a, b) => {
+      const c = compareLineItemDateDesc(a.date, b.date);
+      if (c !== 0) return c;
+      return String(a.id || "").localeCompare(String(b.id || ""));
+    });
   }
 
   function money(n) {
@@ -394,6 +432,8 @@
     if (state.billItems.length === 0 && mustPay > 0) {
       state.billItems = [{ id: uid(), name: "Expenses", amount: mustPay, date: todayYmd(), done: false }];
     }
+    sortMoneyItemsByDateDesc(state.incomeItems);
+    sortMoneyItemsByDateDesc(state.billItems);
     state.monthLog = Array.isArray(o.monthLog)
       ? o.monthLog.map((m) => ({
           id: m.id || uid(),
@@ -424,6 +464,8 @@
         { id: uid(), name: "Rent / housing", amount: 300, date: todayYmd(), done: false },
         { id: uid(), name: "Bills & minimums", amount: 100, date: todayYmd(), done: false },
       ];
+      sortMoneyItemsByDateDesc(state.incomeItems);
+      sortMoneyItemsByDateDesc(state.billItems);
       state.monthLog = [];
       state.businessLog = [];
       state.loans = SAMPLE_LOANS.map((l) => ({ ...l, id: uid() }));
@@ -734,12 +776,12 @@
     name.placeholder = kind === "income" ? "Source" : "Item";
     name.setAttribute("aria-label", kind === "income" ? "Income source" : "Expense name");
     const amt = node("input", "business-draft-amt business-draft-input");
-    amt.type = "number";
-    amt.min = "0";
-    amt.step = "0.01";
+    amt.type = "text";
     amt.inputMode = "decimal";
-    amt.placeholder = "0";
+    amt.setAttribute("lang", "en-GB");
+    amt.placeholder = "0.00";
     amt.setAttribute("aria-label", "Amount");
+    amt.setAttribute("autocomplete", "off");
     const btn = node("button", "business-draft-remove");
     btn.type = "button";
     btn.setAttribute("aria-label", "Remove line");
@@ -755,7 +797,7 @@
     if (!container) return 0;
     let s = 0;
     container.querySelectorAll(".business-draft-amt").forEach((inp) => {
-      s += Math.max(0, Number(inp.value) || 0);
+      s += parseBusinessAmountInput(inp.value);
     });
     return round2(s);
   }
@@ -774,7 +816,7 @@
     if (!container) return out;
     container.querySelectorAll(".business-draft-row").forEach((row) => {
       const nameRaw = row.querySelector(".business-draft-name")?.value?.trim() || "";
-      const amount = Math.max(0, Number(row.querySelector(".business-draft-amt")?.value) || 0);
+      const amount = parseBusinessAmountInput(row.querySelector(".business-draft-amt")?.value);
       if (!nameRaw && amount <= 0) return;
       const name = nameRaw || fallbackLabel;
       out.push({ id: uid(), name, amount: round2(amount) });
@@ -792,6 +834,90 @@
     exp.appendChild(buildBusinessDraftRow("expense"));
     updateBusinessDraftTotals();
     paintIcons();
+  }
+
+  function fillBusinessDraftFromEntry(entry) {
+    const inc = el("businessIncomeDraft");
+    const exp = el("businessExpenseDraft");
+    if (!inc || !exp) return;
+    inc.replaceChildren();
+    exp.replaceChildren();
+    const incLines = Array.isArray(entry.incomeItems) ? entry.incomeItems : [];
+    const expLines = Array.isArray(entry.expenseItems) ? entry.expenseItems : [];
+    const useLines = (lines) =>
+      lines.filter((x) => String(x.name || "").trim() || (Number(x.amount) || 0) > 0);
+    const inUse = useLines(incLines);
+    const exUse = useLines(expLines);
+    if (!inUse.length) {
+      inc.appendChild(buildBusinessDraftRow("income"));
+    } else {
+      inUse.forEach((line) => {
+        const row = buildBusinessDraftRow("income");
+        row.querySelector(".business-draft-name").value = String(line.name || "").trim();
+        const a = Number(line.amount) || 0;
+        row.querySelector(".business-draft-amt").value = a > 0 ? String(round2(a)) : "";
+        inc.appendChild(row);
+      });
+    }
+    if (!exUse.length) {
+      exp.appendChild(buildBusinessDraftRow("expense"));
+    } else {
+      exUse.forEach((line) => {
+        const row = buildBusinessDraftRow("expense");
+        row.querySelector(".business-draft-name").value = String(line.name || "").trim();
+        const a = Number(line.amount) || 0;
+        row.querySelector(".business-draft-amt").value = a > 0 ? String(round2(a)) : "";
+        exp.appendChild(row);
+      });
+    }
+    updateBusinessDraftTotals();
+    paintIcons();
+  }
+
+  function startEditLatestBusinessMonth() {
+    if (!state.businessLog.length || businessEditBackup) return;
+    const entry = state.businessLog[0];
+    businessEditBackup = {
+      id: entry.id,
+      label: entry.label,
+      income: entry.income,
+      expenses: entry.expenses,
+      incomeItems: Array.isArray(entry.incomeItems) ? entry.incomeItems.map((x) => ({ ...x })) : [],
+      expenseItems: Array.isArray(entry.expenseItems) ? entry.expenseItems.map((x) => ({ ...x })) : [],
+    };
+    state.businessLog.shift();
+    if (el("businessMonthLabel")) el("businessMonthLabel").value = businessEditBackup.label || "";
+    fillBusinessDraftFromEntry(businessEditBackup);
+    const lead = el("businessAddLead");
+    if (lead) {
+      lead.textContent =
+        "You’re editing this month. Add month to save your changes, or Cancel to restore the previous save.";
+    }
+    savePlanner();
+    renderBusinessLog();
+    paintIcons();
+  }
+
+  function cancelLatestBusinessMonthEdit() {
+    if (!businessEditBackup) return;
+    state.businessLog.unshift({
+      id: businessEditBackup.id,
+      label: businessEditBackup.label,
+      income: businessEditBackup.income,
+      expenses: businessEditBackup.expenses,
+      incomeItems: businessEditBackup.incomeItems.map((x) => ({ ...x })),
+      expenseItems: businessEditBackup.expenseItems.map((x) => ({ ...x })),
+    });
+    businessEditBackup = null;
+    if (el("businessMonthLabel")) el("businessMonthLabel").value = "";
+    resetBusinessDraft();
+    const lead = el("businessAddLead");
+    if (lead) {
+      lead.textContent =
+        "Add your monthly incomes, expenses, and lines as you like, then save. You can use decimals (e.g. 19.99).";
+    }
+    savePlanner();
+    renderBusinessLog();
   }
 
   function bindBusinessDraftOnce() {
@@ -965,12 +1091,14 @@
     });
     tierLab.append(tierSpan, sel);
 
-    const fields = node("div", "debt-card-fields debt-card-fields--three");
-    appendLabelledNumberField(fields, "Balance left (£)", "balance", index, loan.balance, "0.01");
-    appendLabelledNumberField(fields, "Interest % (0 if none)", "apr", index, loan.apr, "0.1");
-    appendLabelledNumberField(fields, "Payment this month (£)", "monthlyPayment", index, mp, "0.01");
+    const fieldsDebt = node("div", "debt-card-fields debt-card-fields--debt");
+    appendLabelledNumberField(fieldsDebt, "Balance left (£)", "balance", index, loan.balance, "0.01");
+    appendLabelledNumberField(fieldsDebt, "Interest % (0 if none)", "apr", index, loan.apr, "0.1");
 
-    article.append(top, balLab, balEl, planned, tierLab, fields);
+    const fieldsPlan = node("div", "debt-card-fields debt-card-fields--plan");
+    appendLabelledNumberField(fieldsPlan, "Payment this month (£)", "monthlyPayment", index, mp, "0.01");
+
+    article.append(top, balLab, balEl, planned, tierLab, fieldsDebt, fieldsPlan);
 
     if (paidOff) {
       const po = node("p", "debt-card-paid-off muted small");
@@ -1177,7 +1305,7 @@
     head.append(hName, hAmt, hDate, hStatus);
     list.appendChild(head);
 
-    state.incomeItems.forEach((row, index) => {
+    sortedLineItemDisplayOrder(state.incomeItems).forEach(({ row, i: index }) => {
       list.appendChild(buildMoneyLineRow(row, index, "income", "data-ii", "data-income-del"));
     });
     const sumEl = el("incomeItemsSum");
@@ -1216,7 +1344,7 @@
     head.append(hName, hAmt, hDate, hStatus);
     list.appendChild(head);
 
-    state.billItems.forEach((b, index) => {
+    sortedLineItemDisplayOrder(state.billItems).forEach(({ row: b, i: index }) => {
       list.appendChild(buildMoneyLineRow(b, index, "bill", "data-i", "data-bill-del"));
     });
     const sumEl = el("billItemsSum");
@@ -1375,6 +1503,7 @@
 
     const date = dateEl?.value || "";
     state.incomeItems.push({ id: uid(), name: source, amount: round2(amount), date, done: false });
+    sortMoneyItemsByDateDesc(state.incomeItems);
     savePlanner();
     closeAddIncomeModal();
     refresh({ skipLoans: true });
@@ -1436,6 +1565,7 @@
 
     const date = dateEl?.value || "";
     state.billItems.push({ id: uid(), name: source, amount: round2(amount), date, done: false });
+    sortMoneyItemsByDateDesc(state.billItems);
     savePlanner();
     closeAddExpenseModal();
     refresh({ skipLoans: true });
@@ -1463,26 +1593,59 @@
     const empty = el("businessMonthEmpty");
     const latestProfitEl = el("businessProfitMonth");
     const totalEarningsEl = el("businessTotalEarnings");
-    if (!tbody) return;
-    tbody.replaceChildren();
+    const labEl = el("businessLatestMonthLabel");
+    const incDisp = el("businessLatestIncomeDisplay");
+    const expDisp = el("businessLatestExpenseDisplay");
+    const editBtn = el("btnBusinessEditLatest");
+    const cancelBtn = el("btnBusinessCancelEdit");
+
+    const totalEarnings = round2(
+      state.businessLog.reduce((sum, row) => {
+        const t = businessMonthTotals(row);
+        return sum + (t.income - t.expenses);
+      }, 0)
+    );
 
     let latestProfit = 0;
-    let totalEarnings = 0;
-    if (state.businessLog.length > 0) {
+    let latestInc = 0;
+    let latestExp = 0;
+
+    if (businessEditBackup && state.businessLog.length === 0) {
+      const tb = businessMonthTotals(businessEditBackup);
+      latestInc = tb.income;
+      latestExp = tb.expenses;
+      latestProfit = round2(tb.income - tb.expenses);
+      if (labEl) {
+        const lab = (businessEditBackup.label || "").trim();
+        labEl.textContent = lab ? `Editing: ${lab}` : "Editing month";
+      }
+    } else if (state.businessLog.length > 0) {
       const t0 = businessMonthTotals(state.businessLog[0]);
+      latestInc = t0.income;
+      latestExp = t0.expenses;
       latestProfit = round2(t0.income - t0.expenses);
-      totalEarnings = round2(
-        state.businessLog.reduce((sum, row) => {
-          const t = businessMonthTotals(row);
-          return sum + (t.income - t.expenses);
-        }, 0)
-      );
+      if (labEl) labEl.textContent = (state.businessLog[0].label || "").trim() || "Latest month";
+    } else {
+      if (labEl) labEl.textContent = "No month saved yet.";
     }
-    if (latestProfitEl) latestProfitEl.textContent = moneyFull(latestProfit);
+
+    if (incDisp) incDisp.textContent = moneyFull(latestInc);
+    if (expDisp) expDisp.textContent = moneyFull(latestExp);
+    if (latestProfitEl) {
+      latestProfitEl.textContent = moneyFull(latestProfit);
+      latestProfitEl.classList.toggle("mint", latestProfit >= 0);
+      latestProfitEl.classList.toggle("big-stat--warn", latestProfit < 0);
+    }
     if (totalEarningsEl) totalEarningsEl.textContent = moneyFull(totalEarnings);
 
+    if (editBtn) editBtn.classList.toggle("hidden", state.businessLog.length === 0 || !!businessEditBackup);
+    if (cancelBtn) cancelBtn.classList.toggle("hidden", !businessEditBackup);
+
+    if (!tbody) return;
+    tbody.replaceChildren();
     if (!state.businessLog.length) {
       if (empty) empty.classList.remove("hidden");
+      paintIcons();
       return;
     }
     if (empty) empty.classList.add("hidden");
@@ -1490,6 +1653,37 @@
       tbody.appendChild(buildBusinessLogRows(m, index));
     });
     paintIcons();
+  }
+
+  function updatePayoffAtAGlance(sumPlanned, leftForDebt, spareAfterPlan) {
+    const sec = el("payoffAtAGlance");
+    const list = el("payoffAtAGlanceList");
+    const foot = el("payoffAtAGlanceFoot");
+    if (!sec || !list || !foot) return;
+    list.replaceChildren();
+    if (!state.loans.length) {
+      sec.classList.add("hidden");
+      return;
+    }
+    sec.classList.remove("hidden");
+    const li1 = node("li");
+    const s1 = node("strong");
+    s1.textContent = moneyFull(leftForDebt);
+    li1.append("After bills (Money): ", s1);
+    list.appendChild(li1);
+    const li2 = node("li");
+    const s2 = node("strong");
+    s2.textContent = moneyFull(sumPlanned);
+    li2.append("Planned to debts this month: ", s2);
+    list.appendChild(li2);
+    const li3 = node("li");
+    const s3 = node("strong");
+    s3.textContent = moneyFull(spareAfterPlan);
+    if (spareAfterPlan < -0.005) s3.style.color = "var(--warning)";
+    li3.append("Left after planned debt payments: ", s3);
+    list.appendChild(li3);
+    foot.textContent =
+      "Change planned amounts on Debts: open each card and set Payment this month (£). Change income or bills on Money.";
   }
 
   function renderLoans() {
@@ -1508,7 +1702,8 @@
     const k = input.getAttribute("data-k");
     if (k === "name") state.loans[i].name = input.value;
     else if (k === "tier") state.loans[i].tier = input.value;
-    else if (k === "monthlyPayment") state.loans[i].monthlyPayment = Math.max(0, Number(input.value) || 0);
+    else if (k === "monthlyPayment")
+      state.loans[i].monthlyPayment = round2(Math.max(0, Number(input.value) || 0));
     else state.loans[i][k] = Number(input.value) || 0;
     savePlanner();
     refresh({ skipLoans: true });
@@ -1578,6 +1773,8 @@
         mountDebtsPaySummary(dps, sumPlanned, leftForDebt, spareAfterPlan);
       }
     }
+
+    updatePayoffAtAGlance(sumPlanned, leftForDebt, spareAfterPlan);
 
     const total = state.loans.reduce((s, l) => s + Math.max(0, Number(l.balance) || 0), 0);
     el("totalDebt").textContent = moneyFull(total);
@@ -1998,8 +2195,10 @@
         }
         return;
       }
+      const newId = businessEditBackup ? businessEditBackup.id : uid();
+      businessEditBackup = null;
       state.businessLog.unshift({
-        id: uid(),
+        id: newId,
         label,
         income,
         expenses,
@@ -2008,9 +2207,17 @@
       });
       if (el("businessMonthLabel")) el("businessMonthLabel").value = "";
       resetBusinessDraft();
+      const lead = el("businessAddLead");
+      if (lead) {
+        lead.textContent =
+          "Add your monthly incomes, expenses, and lines as you like, then save. You can use decimals (e.g. 19.99).";
+      }
       savePlanner();
       renderBusinessLog();
     });
+
+    el("btnBusinessEditLatest")?.addEventListener("click", () => startEditLatestBusinessMonth());
+    el("btnBusinessCancelEdit")?.addEventListener("click", () => cancelLatestBusinessMonthEdit());
 
     el("btnCommitLoan").addEventListener("click", () => {
       const err = el("debtDraftError");
@@ -2148,6 +2355,7 @@
           return;
         }
         applyPlannerPayload(data.planner);
+        businessEditBackup = null;
         savePlanner();
         if (data.profile && typeof data.profile === "object") {
           state.profile.displayName = typeof data.profile.displayName === "string" ? data.profile.displayName : "";
@@ -2230,6 +2438,7 @@
       el("authConfirm").value = "";
       loadPlanner();
       syncFormFromState();
+      businessEditBackup = null;
       resetBusinessDraft();
       updateAccountPanel();
       refresh();
@@ -2239,6 +2448,7 @@
       signOut();
       loadPlanner();
       syncFormFromState();
+      businessEditBackup = null;
       resetBusinessDraft();
       updateAccountPanel();
       refresh();
@@ -2255,6 +2465,7 @@
       }
       el("deletePassword").value = "";
       syncFormFromState();
+      businessEditBackup = null;
       resetBusinessDraft();
       updateAccountPanel();
       refresh();

@@ -1608,6 +1608,27 @@ input[type="number"]::-webkit-inner-spin-button {
   }
 }
 
+.debt-card-fields--debt {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px 14px;
+  align-items: end;
+}
+
+@media (min-width: 560px) {
+  .debt-card-fields--debt {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.debt-card-fields--plan {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px 14px;
+  align-items: end;
+  margin-top: 4px;
+}
+
 .debt-card-actions {
   display: flex;
   flex-wrap: wrap;
@@ -2206,7 +2227,12 @@ input.bill-line-date::-webkit-calendar-picker-indicator {
 
 /* Business tab */
 .business-add-card .section-label {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+}
+
+.business-add-lead {
+  margin: 0 0 12px;
+  line-height: 1.45;
 }
 
 .business-month-field {
@@ -2356,9 +2382,54 @@ input.bill-line-date::-webkit-calendar-picker-indicator {
   line-height: 1.15;
 }
 
+.business-summary-card .big-stat.big-stat--warn {
+  color: var(--warning);
+}
+
 .business-summary-hint {
   margin: 0;
   line-height: 1.35;
+}
+
+.business-latest-label {
+  margin: 0 0 8px;
+  line-height: 1.35;
+}
+
+.business-profit-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.business-profit-breakdown__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.84rem;
+}
+
+.business-profit-breakdown__row strong {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  font-weight: 650;
+}
+
+.business-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.business-edit-actions .small-btn {
+  min-height: 38px;
 }
 
 .business-log-detail {
@@ -2421,6 +2492,47 @@ input.bill-line-date::-webkit-calendar-picker-indicator {
     grid-template-columns: 1fr;
     gap: 12px;
   }
+}
+
+/* Payoff tab: at a glance */
+.payoff-at-a-glance {
+  margin-bottom: 4px;
+}
+
+.payoff-at-a-glance__title {
+  margin: 0 0 10px;
+}
+
+.payoff-at-a-glance__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.payoff-at-a-glance__list li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.payoff-at-a-glance__list strong {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.payoff-at-a-glance__foot {
+  margin: 10px 0 0;
+  line-height: 1.4;
 }
 
 /* Investor tab */
@@ -2857,12 +2969,19 @@ input.bill-line-date::-webkit-calendar-picker-indicator {
 
 }
 
-/* Debts (iPhone): show name + balance only */
+/* Debts (iPhone): name + balance + planned payment field (balance/APR hidden in second block) */
 @media (max-width: 560px) {
-  #loanList .debt-card-planned,
   #loanList .debt-card-tier,
-  #loanList .debt-card-fields {
+  #loanList .debt-card-fields--debt {
     display: none !important;
+  }
+
+  #loanList .debt-card-fields--plan {
+    display: grid !important;
+  }
+
+  #loanList .debt-card-planned {
+    display: block !important;
   }
 
   #loanList .debt-card-actions .btn.secondary {
