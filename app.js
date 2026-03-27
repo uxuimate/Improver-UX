@@ -744,7 +744,7 @@
 
   function buildDebtsPayWarnParagraph(sumPlanned, leftForDebt) {
     const p = node("p", "debts-pay-warn");
-    p.append("Planned debt payments (");
+    p.append("Remaining planned debt payments (");
     const s1 = node("strong");
     s1.textContent = moneyFull(sumPlanned);
     p.append(s1, ") are more than what’s left after bills (");
@@ -758,12 +758,12 @@
     dps.replaceChildren();
     const wrap = node("div", "ios-summary-group ios-summary-group--embedded debts-pay-ios");
     wrap.setAttribute("role", "region");
-    wrap.setAttribute("aria-label", "What you planned to pay toward debts this month");
+    wrap.setAttribute("aria-label", "What you still plan to pay toward debts this month");
     const list = node("div", "ios-summary-list");
     list.setAttribute("role", "list");
     const headroomClass = spareAfterPlan >= 0 ? "ios-summary-value--accent" : "ios-summary-value--warn";
     list.append(
-      buildIosSummaryRow("Planned to all debts", moneyFull(sumPlanned), "ios-summary-value--text", false),
+      buildIosSummaryRow("Still planned to all debts", moneyFull(sumPlanned), "ios-summary-value--text", false),
       buildIosSummaryRow("After bills (Money tab)", moneyFull(leftForDebt), "ios-summary-value--text", false),
       buildIosSummaryRow("Left after this plan", moneyFull(spareAfterPlan), headroomClass, true)
     );
@@ -1288,6 +1288,7 @@
     const ymKey = ymKeyFromYmd(todayYmd());
     const paidThisYm = paymentsThisYmSum(loan, ymKey);
     const remainingPlanned = plannedRemainingForLoan(loan, ymKey);
+    const remainingWhole = Math.max(0, Math.round(remainingPlanned));
 
     const article = node("article", "card glass money-card debt-card");
     article.setAttribute("data-loan-index", String(index));
@@ -1363,7 +1364,7 @@
 
     article.appendChild(detailsDebt);
 
-    const showPlannedRow = !paidOff && remainingPlanned > 0.005;
+    const showPlannedRow = !paidOff && remainingWhole > 0;
     if (showPlannedRow || payments.length > 0) {
       const det = node("details", "debt-payment-log");
       const sum = node("summary", "debt-payment-log__summary");
@@ -1378,7 +1379,6 @@
       const ul = node("ul", "debt-payment-log__list");
 
       if (showPlannedRow) {
-        const remainingWhole = Math.max(0, Math.round(remainingPlanned));
         const li = node("li", "debt-payment-row");
         const txt = node("span", "debt-payment-row__text");
         txt.textContent = `Planned (this month) · ${money(remainingWhole)}`;
@@ -1764,12 +1764,18 @@
     return ymd.slice(0, 7);
   }
 
+  /** yyyy-mm from payment row date (ISO date or datetime prefix). */
+  function ymKeyFromPaymentAt(at) {
+    if (!at || typeof at !== "string") return "";
+    const m = at.trim().match(/^(\d{4}-\d{2}-\d{2})/);
+    return m ? m[1].slice(0, 7) : "";
+  }
+
   function paymentsThisYmSum(loan, ymKey) {
     if (!loan || !Array.isArray(loan.payments) || !ymKey) return 0;
     let s = 0;
     loan.payments.forEach((p) => {
-      const at = p && typeof p.at === "string" ? p.at : "";
-      if (!at.startsWith(ymKey)) return;
+      if (ymKeyFromPaymentAt(p && p.at) !== ymKey) return;
       s += Number(p && p.amount != null ? p.amount : 0) || 0;
     });
     return round2(s);
@@ -2113,7 +2119,7 @@
     const li2 = node("li");
     const s2 = node("strong");
     s2.textContent = moneyFull(sumPlanned);
-    li2.append("Planned to debts this month: ", s2);
+    li2.append("Still planned to debts this month: ", s2);
     list.appendChild(li2);
     const li3 = node("li");
     const s3 = node("strong");
@@ -2122,7 +2128,7 @@
     li3.append("Left after planned debt payments: ", s3);
     list.appendChild(li3);
     foot.textContent =
-      "Change planned amounts on Debts: use Payment this month (£) when you add a debt, or change income or bills on Money.";
+      "Recorded payments this month reduce this total. Change planned amounts on Debts (Payment this month £), or income and bills on Money.";
   }
 
   function renderLoans() {
@@ -2174,9 +2180,12 @@
 
     savePlanner();
 
-    const sumPlanned = state.loans.reduce((s, l) => s + (Number(l.monthlyPayment) || 0), 0);
-    const spareAfterPlan = leftForDebt - sumPlanned;
-    const insolvent = leftForDebt + 0.001 < sumPlanned && state.loans.length > 0;
+    const ymKey = ymKeyFromYmd(todayYmd());
+    const sumPlannedRemaining = round2(
+      state.loans.reduce((s, l) => s + plannedRemainingForLoan(l, ymKey), 0)
+    );
+    const spareAfterPlan = leftForDebt - sumPlannedRemaining;
+    const insolvent = leftForDebt + 0.001 < sumPlannedRemaining && state.loans.length > 0;
 
     const dps = el("debtsPaySummary");
     if (dps) {
@@ -2185,11 +2194,11 @@
         dps.replaceChildren();
       } else {
         dps.classList.remove("hidden");
-        mountDebtsPaySummary(dps, sumPlanned, leftForDebt, spareAfterPlan);
+        mountDebtsPaySummary(dps, sumPlannedRemaining, leftForDebt, spareAfterPlan);
       }
     }
 
-    updatePayoffAtAGlance(sumPlanned, leftForDebt, spareAfterPlan);
+    updatePayoffAtAGlance(sumPlannedRemaining, leftForDebt, spareAfterPlan);
 
     const total = state.loans.reduce((s, l) => s + Math.max(0, Number(l.balance) || 0), 0);
     el("totalDebt").textContent = moneyFull(total);
