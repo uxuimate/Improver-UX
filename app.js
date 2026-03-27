@@ -105,11 +105,25 @@
     inv.ladderLegs = n;
     const prev = Array.isArray(inv.completedLegs) ? inv.completedLegs.map(Boolean) : [];
     inv.completedLegs = Array.from({ length: n }, (_, i) => !!prev[i]);
+    const prevDrafts = Array.isArray(inv.legDrafts) ? inv.legDrafts : [];
+    inv.legDrafts = Array.from({ length: n }, (_, i) => {
+      const d = prevDrafts[i] && typeof prevDrafts[i] === "object" ? prevDrafts[i] : {};
+      return {
+        start:
+          d.start == null || d.start === "" || Number.isNaN(Number(d.start))
+            ? null
+            : Math.max(0, Number(d.start)),
+        odds:
+          d.odds == null || d.odds === "" || Number.isNaN(Number(d.odds))
+            ? null
+            : Math.max(1.01, Number(d.odds)),
+      };
+    });
   }
 
   function mergeInvestor(raw) {
     if (!raw || typeof raw !== "object") {
-      const inv = { monthlyStake: 0, bankroll: 0, target: 0, ladderLegs: 7, ladderOdds: 3, completedLegs: [] };
+      const inv = { monthlyStake: 0, bankroll: 0, target: 0, ladderLegs: 7, ladderOdds: 3, completedLegs: [], legDrafts: [] };
       padInvestorCompleted(inv);
       return inv;
     }
@@ -120,13 +134,14 @@
       ladderLegs: Math.min(30, Math.max(1, Math.round(Number(raw.ladderLegs) || 7))),
       ladderOdds: Math.max(1.01, Number(raw.ladderOdds) || 3),
       completedLegs: Array.isArray(raw.completedLegs) ? raw.completedLegs.map(Boolean) : [],
+      legDrafts: Array.isArray(raw.legDrafts) ? raw.legDrafts : [],
     };
     padInvestorCompleted(inv);
     return inv;
   }
 
   function defaultInvestorGuest() {
-    const inv = { monthlyStake: 100, bankroll: 100, target: 20000, ladderLegs: 7, ladderOdds: 3, completedLegs: [] };
+    const inv = { monthlyStake: 100, bankroll: 100, target: 20000, ladderLegs: 7, ladderOdds: 3, completedLegs: [], legDrafts: [] };
     padInvestorCompleted(inv);
     return inv;
   }
@@ -1273,9 +1288,6 @@
     const ymKey = ymKeyFromYmd(todayYmd());
     const paidThisYm = paymentsThisYmSum(loan, ymKey);
     const remainingPlanned = plannedRemainingForLoan(loan, ymKey);
-    const plannedApply = round2(Math.min(remainingPlanned, bal));
-    const newBal = Math.max(0, round2(bal - plannedApply));
-    const capPart = remainingPlanned > bal ? " (capped by what’s left)" : "";
 
     const article = node("article", "card glass money-card debt-card");
     article.setAttribute("data-loan-index", String(index));
@@ -1304,34 +1316,6 @@
     balStrong.textContent = moneyFull(bal);
     balEl.appendChild(balStrong);
 
-    const planned = node("div", "debt-card-planned");
-    if (mp <= 0.005 && paidThisYm <= 0.005) planned.classList.add("hidden");
-    const pMain = node("p", "debt-card-planned-main");
-    if (remainingPlanned <= 0.005 && mp > 0.005 && paidThisYm > 0.005) {
-      const paidAmtStrong = node("strong");
-      pMain.append("You’ve paid ");
-      paidAmtStrong.textContent = moneyFull(paidThisYm);
-      pMain.append(paidAmtStrong, " this month toward this debt.");
-      planned.appendChild(pMain);
-    } else if (mp <= 0.005 && paidThisYm > 0.005) {
-      const paidAmt = node("strong");
-      pMain.append("You’ve paid ");
-      paidAmt.textContent = moneyFull(paidThisYm);
-      pMain.append(paidAmt, " this month toward this debt.");
-      planned.appendChild(pMain);
-    } else {
-      pMain.append("You’re planning ");
-      const planAmt = node("strong");
-      planAmt.textContent = moneyFull(plannedApply);
-      pMain.append(planAmt, ` this month toward this debt${capPart}.`);
-
-      const pSub = node("p", "debt-card-planned-sub muted small");
-      pSub.append("If you paid that much, you’d be down to about ");
-      const newBalS = node("strong");
-      newBalS.textContent = moneyFull(newBal);
-      pSub.append(newBalS, " before interest.");
-      planned.append(pMain, pSub);
-    }
 
     const tierLab = node("label", "field loan-tier debt-card-tier");
     const tierSpan = node("span", "field-label");
@@ -1359,7 +1343,7 @@
     detailsBody.append(tierLab, fieldsDebt);
     detailsDebt.append(sumDetails, detailsBody);
 
-    article.append(top, balLab, balEl, planned);
+    article.append(top, balLab, balEl);
 
     if (paidOff) {
       const po = node("p", "debt-card-paid-off muted small");
@@ -2181,88 +2165,18 @@
     state.budget.mustPayBills = mustPay;
 
     const leftForDebt = income - mustPay;
-
-    // Planned Debt: if the user hasn't set any planned amounts yet, prefill from:
-    // 1) payments already recorded this month, then
-    // 2) remaining spare money, distributed by the app's default payoff priority.
-    const ymKey = ymKeyFromYmd(todayYmd());
-    let didInitPlannedDebts = false;
-    const sumPlannedBefore = state.loans.reduce((s, l) => s + (Number(l.monthlyPayment) || 0), 0);
-    if (state.loans.length && sumPlannedBefore <= 0.005) {
-      const paidTotal = state.loans.reduce((s, l) => s + paymentsThisYmSum(l, ymKey), 0);
-      const paidTotalWhole = Math.round(paidTotal);
-      state.loans.forEach((l) => {
-        l.monthlyPayment = Math.round(paymentsThisYmSum(l, ymKey));
-      });
-
-      let remaining = Math.round(leftForDebt - paidTotalWhole);
-      if (remaining > 0) {
-        const withMeta = state.loans.map((l, i) => ({
-          i,
-          tier: normalizeTier(l.tier),
-          balance: Math.max(0, Number(l.balance) || 0),
-          apr: Math.max(0, Number(l.apr) || 0),
-        }));
-
-        // Default: people first (smallest balance), then overdraft highest rate, then everything else highest rate.
-        withMeta.sort((a, b) => {
-          const ta = TIER_ORDER[a.tier] ?? 2;
-          const tb = TIER_ORDER[b.tier] ?? 2;
-          if (ta !== tb) return ta - tb;
-          if (ta === 0) return a.balance - b.balance; // people: snowball
-          return b.apr - a.apr; // overdraft & other: avalanche-like by rate
-        });
-
-        for (const x of withMeta) {
-          if (remaining <= 0) break;
-          const xBalWhole = Math.max(0, Math.floor(x.balance));
-          const add = Math.min(remaining, xBalWhole);
-          if (add <= 0) continue;
-          state.loans[x.i].monthlyPayment = Math.round(Number(state.loans[x.i].monthlyPayment) + add);
-          remaining = remaining - add;
-        }
-      }
-
-      didInitPlannedDebts = true;
-    }
+    const quickIncome = el("moneyQuickIncome");
+    if (quickIncome) quickIncome.textContent = moneyFull(income);
+    const quickExpenses = el("moneyQuickExpenses");
+    if (quickExpenses) quickExpenses.textContent = moneyFull(mustPay);
+    const quickLeft = el("moneyQuickLeft");
+    if (quickLeft) quickLeft.textContent = moneyFull(leftForDebt);
 
     savePlanner();
 
     const sumPlanned = state.loans.reduce((s, l) => s + (Number(l.monthlyPayment) || 0), 0);
-    const snapIn = el("snapIncome");
-    if (snapIn) snapIn.textContent = moneyFull(income);
-    const cashDebtEl = el("cashDebt");
-    if (cashDebtEl) {
-      cashDebtEl.textContent = moneyFull(leftForDebt);
-      cashDebtEl.classList.remove("ios-summary-value--accent", "ios-summary-value--warn");
-      cashDebtEl.classList.add(leftForDebt >= 0 ? "ios-summary-value--accent" : "ios-summary-value--warn");
-    }
     const spareAfterPlan = leftForDebt - sumPlanned;
-    const debtCtx = el("moneyDebtContext");
-    if (debtCtx) {
-      if (state.loans.length === 0) {
-        debtCtx.classList.add("hidden");
-        debtCtx.innerHTML = "";
-      } else {
-        debtCtx.classList.remove("hidden");
-        setMoneyDebtContextVisible(debtCtx, sumPlanned, spareAfterPlan);
-      }
-    }
-
-    const adv = el("leftoverAdvice");
-    if (state.loans.length === 0) {
-      adv.textContent = "When you add debts on the Debts tab, we’ll show payoff order and timelines on Payoff.";
-    } else {
-      adv.textContent = "Open Payoff for a suggested order and how debt could shrink over time.";
-    }
-
     const insolvent = leftForDebt + 0.001 < sumPlanned && state.loans.length > 0;
-    const ban = el("insolventBanner");
-    if (insolvent) {
-      ban.classList.remove("hidden");
-      ban.textContent =
-        "After bills, you don’t have enough for the debt payments you’ve planned this month. Lower planned amounts (set when you added each debt), trim bills, or bump income if you can.";
-    } else ban.classList.add("hidden");
 
     const dps = el("debtsPaySummary");
     if (dps) {
@@ -2573,16 +2487,23 @@
       const rows = [];
       let balance = B;
       const checks = i.completedLegs || [];
+      const drafts = Array.isArray(i.legDrafts) ? i.legDrafts : [];
       for (let day = 1; day <= legs; day++) {
-        const start = balance;
-        const end = start * oL;
+        const draft = drafts[day - 1] || {};
+        const startDraft = draft.start == null || draft.start === "" ? null : Number(draft.start);
+        const oddsDraft = draft.odds == null || draft.odds === "" ? null : Number(draft.odds);
+        const start = startDraft != null && Number.isFinite(startDraft) ? Math.max(0, startDraft) : balance;
+        const odds = oddsDraft != null && Number.isFinite(oddsDraft) ? Math.max(1.01, oddsDraft) : oL;
+        const end = start * odds;
         const done = !!checks[day - 1];
+        const startVal = round2(start);
+        const oddsVal = round2(odds);
         rows.push(
-          `<tr class="${done ? "inv-day-done" : ""}"><td class="inv-check-cell"><label class="inv-check-label"><input type="checkbox" class="inv-day-check" data-inv-day="${day}" ${done ? "checked" : ""} aria-label="Day ${day} completed" /></label></td><td>${day}</td><td>${moneyFull(start)}</td><td>×${round2(oL)}</td><td>${moneyFull(end)}</td></tr>`
+          `<tr class="${done ? "inv-day-done" : ""}"><td class="inv-check-cell"><label class="inv-check-label"><input type="checkbox" class="inv-day-check" data-inv-day="${day}" ${done ? "checked" : ""} aria-label="Day ${day} completed" /></label></td><td>${day}</td><td><input type="number" class="inv-ladder-input inv-ladder-input--money" data-inv-start="${day}" min="0" step="0.01" value="${startVal}" ${done ? "disabled" : ""} aria-label="Day ${day} balance in" /></td><td><input type="number" class="inv-ladder-input inv-ladder-input--odds" data-inv-odds="${day}" min="1.01" step="0.01" value="${oddsVal}" ${done ? "disabled" : ""} aria-label="Day ${day} odds" /></td><td>${moneyFull(end)}</td></tr>`
         );
         balance = end;
       }
-      ladderHost.innerHTML = `<table><thead><tr><th>Done</th><th>Day</th><th>Balance in</th><th>Odds</th><th>Balance out</th></tr></thead><tbody>${rows.join("")}</tbody></table>`;
+      ladderHost.innerHTML = `<table><thead><tr><th>Done</th><th>Day</th><th>Balance</th><th>Odds</th><th>Bank</th></tr></thead><tbody>${rows.join("")}</tbody></table>`;
     } else if (ladderHost) {
       ladderHost.innerHTML = `<p class="tiny muted">Set bankroll and ladder odds to preview each leg.</p>`;
     }
@@ -2603,9 +2524,44 @@
       renderInvestor();
       paintIcons();
     });
+    wrap.addEventListener("input", (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLInputElement)) return;
+      const startDay = Number(t.getAttribute("data-inv-start"));
+      const oddsDay = Number(t.getAttribute("data-inv-odds"));
+      if (!startDay && !oddsDay) return;
+      readInvestorFromDom();
+      const day = startDay || oddsDay;
+      const idx = day - 1;
+      if (idx < 0) return;
+      if (!Array.isArray(state.investor.legDrafts)) state.investor.legDrafts = [];
+      if (!state.investor.legDrafts[idx]) state.investor.legDrafts[idx] = { start: null, odds: null };
+      if (startDay) {
+        const v = t.value.trim();
+        state.investor.legDrafts[idx].start = v === "" ? null : Math.max(0, Number(v) || 0);
+      } else if (oddsDay) {
+        const v = t.value.trim();
+        state.investor.legDrafts[idx].odds = v === "" ? null : Math.max(1.01, Number(v) || 1.01);
+      }
+      savePlanner();
+    });
+    wrap.addEventListener("change", (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLInputElement)) return;
+      const day = Number(t.getAttribute("data-inv-start") || t.getAttribute("data-inv-odds"));
+      if (!day) return;
+      savePlanner();
+      renderInvestor();
+    });
   }
 
   function bindInvestor() {
+    function resetInvestorLadderState() {
+      state.investor.completedLegs = [];
+      state.investor.legDrafts = [];
+      padInvestorCompleted(state.investor);
+    }
+
     ["invMonthlyStake", "invBankroll", "invTarget", "invLadderLegs", "invLadderOdds"].forEach((id) => {
       const n = el(id);
       if (!n) return;
@@ -2621,6 +2577,7 @@
         el("invLadderLegs").value = 7;
         el("invLadderOdds").value = 3;
         readInvestorFromDom();
+        resetInvestorLadderState();
         savePlanner();
         renderInvestor();
       });
@@ -2633,6 +2590,7 @@
         el("invLadderLegs").value = 7;
         el("invLadderOdds").value = 3;
         readInvestorFromDom();
+        resetInvestorLadderState();
         savePlanner();
         renderInvestor();
       });

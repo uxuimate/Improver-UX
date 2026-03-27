@@ -2056,6 +2056,50 @@ input[type="number"]::-webkit-inner-spin-button {
   margin-bottom: 6px;
 }
 
+.money-quick-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.money-quick-card {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.money-quick-card__label {
+  margin: 0 0 4px;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.money-quick-card__value {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.money-quick-card--accent {
+  border-color: rgba(var(--mint-rgb), 0.35);
+  background: rgba(var(--mint-rgb), 0.08);
+}
+
+@media (max-width: 560px) {
+  .money-quick-cards {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .money-quick-card--accent {
+    grid-column: 1 / -1;
+  }
+}
+
 .planned-debts-card .section-label {
   margin-bottom: 0;
 }
@@ -2334,6 +2378,10 @@ input[type="number"]::-webkit-inner-spin-button {
   width: 100%;
   justify-content: center;
   border-radius: 16px;
+}
+
+.money-card-add-btn {
+  margin-top: 4px;
 }
 
 @media (max-width: 420px) {
@@ -3239,6 +3287,38 @@ input.bill-line-date::-webkit-calendar-picker-indicator {
   min-height: 44px;
 }
 
+.inv-ladder-input {
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  box-shadow: none;
+  outline: none;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.inv-ladder-input:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.inv-ladder-input::-webkit-outer-spin-button,
+.inv-ladder-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.inv-ladder-input--odds {
+  text-align: center;
+}
+
 .investor-footnote {
   margin: 14px 0 0;
   line-height: 1.4;
@@ -3301,9 +3381,65 @@ input.bill-line-date::-webkit-calendar-picker-indicator {
   margin-bottom: 8px;
 }
 
+#panelInvestor .row.two .field {
+  min-width: 0;
+}
+
 #panelInvestor .field.full {
   margin-top: 6px;
   margin-bottom: 8px;
+}
+
+/* Keep investor inputs compact on phones */
+@media (max-width: 560px) {
+  #panelInvestor .row.two {
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 16px;
+    margin-bottom: 12px;
+  }
+
+  #panelInvestor .field {
+    gap: 8px;
+  }
+
+  #panelInvestor .field input {
+    min-height: 44px;
+    padding: 8px 10px;
+  }
+
+  #panelInvestor .field-label {
+    font-size: 0.72rem;
+  }
+
+  #panelInvestor .field.full {
+    margin-top: 6px;
+    margin-bottom: 12px;
+  }
+
+  #panelInvestor .investor-presets {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 18px;
+  }
+
+  #panelInvestor .investor-presets .btn {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  #panelInvestor .investor-presets .btn:only-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 360px) {
+  #panelInvestor .row.two {
+    grid-template-columns: 1fr;
+  }
 }
 
 #panelInvestor .investor-presets {

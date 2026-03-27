@@ -72,14 +72,20 @@
         <input type="hidden" id="income" value="" />
         <input type="hidden" id="mustPayBills" value="" />
 
-        <div class="money-add-buttons" role="group" aria-label="Add income or expense">
-          <button type="button" class="btn secondary btn-with-lucide money-add-btn" id="btnAddIncomeItem">
-            <i data-lucide="plus"></i> Add income
-          </button>
-          <button type="button" class="btn secondary btn-with-lucide money-add-btn" id="btnAddBillItem">
-            <i data-lucide="plus"></i> Add expense
-          </button>
-        </div>
+        <section class="money-quick-cards" aria-label="Money quick totals">
+          <article class="money-quick-card">
+            <p class="money-quick-card__label">Income</p>
+            <p class="money-quick-card__value" id="moneyQuickIncome">£0.00</p>
+          </article>
+          <article class="money-quick-card">
+            <p class="money-quick-card__label">Expenses</p>
+            <p class="money-quick-card__value" id="moneyQuickExpenses">£0.00</p>
+          </article>
+          <article class="money-quick-card money-quick-card--accent">
+            <p class="money-quick-card__label">Left after bills</p>
+            <p class="money-quick-card__value" id="moneyQuickLeft">£0.00</p>
+          </article>
+        </section>
 
         <section class="card glass money-card money-lines-card" aria-labelledby="money-income-heading">
           <h2 id="money-income-heading" class="section-label section-label--with-icon">
@@ -94,6 +100,9 @@
                 <span class="muted small">Total income</span>
                 <strong id="incomeItemsSum">£0</strong>
               </div>
+              <button type="button" class="btn secondary btn-with-lucide money-add-btn money-card-add-btn" id="btnAddIncomeItem">
+                <i data-lucide="plus"></i> Add income
+              </button>
             </div>
           </div>
         </section>
@@ -111,29 +120,11 @@
                 <span class="muted small">Total expenses</span>
                 <strong id="billItemsSum">£0</strong>
               </div>
+              <button type="button" class="btn secondary btn-with-lucide money-add-btn money-card-add-btn" id="btnAddBillItem">
+                <i data-lucide="plus"></i> Add expense
+              </button>
             </div>
           </div>
-        </section>
-
-        <section class="card glass money-card" aria-labelledby="snapshot-card-heading">
-          <h2 id="snapshot-card-heading" class="section-label">What’s left after bills</h2>
-          <p class="hint muted small">Income minus must-pay expenses, this is what could go toward debts (or savings).
-          </p>
-          <div class="ios-summary-group ios-summary-group--embedded" aria-labelledby="snapshot-card-heading">
-            <div class="ios-summary-list" role="list">
-              <div class="ios-summary-row" role="listitem">
-                <span class="ios-summary-label">Money in</span>
-                <strong id="snapIncome" class="ios-summary-value ios-summary-value--text">£0</strong>
-              </div>
-              <div class="ios-summary-row ios-summary-row--footer" role="listitem">
-                <span class="ios-summary-label">What’s left</span>
-                <strong id="cashDebt" class="ios-summary-value ios-summary-value--accent">£0</strong>
-              </div>
-            </div>
-          </div>
-          <p class="money-debt-context muted small hidden" id="moneyDebtContext" aria-live="polite"></p>
-          <p class="advice-line advice-line--tight" id="leftoverAdvice" aria-live="polite"></p>
-          <p class="warning-banner hidden" id="insolventBanner" role="alert"></p>
         </section>
 
         <section class="card glass money-card planned-debts-card" aria-labelledby="planned-debts-heading">
@@ -518,8 +509,6 @@
           <div class="investor-presets">
             <button type="button" class="btn secondary small-btn btn-with-lucide" id="invPreset73"><i
               data-lucide="layers"></i> 7 legs × 3</button>
-            <button type="button" class="btn secondary small-btn btn-with-lucide" id="invPresetTarget"><i
-              data-lucide="target"></i> Example £100 → £20k</button>
           </div>
         </section>
 
