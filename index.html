@@ -24,11 +24,17 @@
       <header class="top-bar">
         <div class="brand">
           <h1 class="logo">Calm<span class="logo-ux">Plan</span></h1>
-          <p class="tagline">Your money, your debts, one calm plan</p>
+          <p class="tagline">Your money, your debts</p>
         </div>
-        <button type="button" class="icon-btn profile-trigger" id="btnProfile" aria-label="Open profile">
-          <span class="avatar-placeholder" id="navAvatar"></span>
+        <button type="button" class="locale-toggle" id="btnLocaleToggle" aria-label="Switch language to BG">
+          <span class="locale-toggle__code" id="localeCode">EN</span>
+          <span class="uk-flag-icon" id="localeFlag" role="img" aria-label="United Kingdom"></span>
         </button>
+        <div class="top-bar-actions">
+          <button type="button" class="icon-btn profile-trigger" id="btnProfile" aria-label="Open profile">
+            <span class="avatar-placeholder" id="navAvatar"></span>
+          </button>
+        </div>
       </header>
 
       <nav class="app-tab-bar" role="tablist" aria-label="CalmPlan sections">
@@ -79,7 +85,7 @@
           <h2 class="panel-title">Money this month</h2>
           <p class="panel-sub muted">Add what comes in and what has to go out. We’ll show what’s left for debt payments.
           </p>
-          <p class="panel-sub panel-sub--autosave muted small">Saves automatically on this device - export a backup from
+          <p class="panel-sub panel-sub--autosave muted">Saves automatically on this device - export a backup from
             Profile if you change phones or clear browser data.</p>
         </div>
 
@@ -384,6 +390,24 @@
           <p class="panel-sub muted">Simple monthly tracking: income, expenses, and clear profit numbers.</p>
         </div>
 
+        <div class="row two business-summary-row business-summary-row--totals">
+          <p class="muted small business-summary-totals-lead" id="businessSummaryTotalsLead">Totals from all saved
+            business months.</p>
+          <section class="card glass money-card business-summary-card" aria-labelledby="business-total-income-heading">
+            <h2 id="business-total-income-heading" class="section-label">Total income</h2>
+            <p class="big-stat" id="businessTotalIncome">£0.00</p>
+          </section>
+          <section class="card glass money-card business-summary-card" aria-labelledby="business-total-expense-heading">
+            <h2 id="business-total-expense-heading" class="section-label">Total expenses</h2>
+            <p class="big-stat" id="businessTotalExpenses">£0.00</p>
+          </section>
+          <section class="card glass money-card business-summary-card business-summary-card--primary"
+          aria-labelledby="business-total-heading">
+            <h2 id="business-total-heading" class="section-label">Total profits</h2>
+            <p class="big-stat" id="businessTotalEarnings">£0.00</p>
+          </section>
+        </div>
+
         <section class="card glass money-card business-add-card" id="businessAddCard"
         aria-labelledby="business-input-heading">
           <details class="business-add-details" id="businessAddDetails">
@@ -474,11 +498,6 @@
             </div>
             <p class="muted small business-summary-hint">Latest saved month. Use Adjust to edit it in the form above.
             </p>
-          </section>
-          <section class="card glass money-card business-summary-card" aria-labelledby="business-total-heading">
-            <h2 id="business-total-heading" class="section-label">Total earnings</h2>
-            <p class="big-stat" id="businessTotalEarnings">£0.00</p>
-            <p class="muted small business-summary-hint">Sum of profit across every month.</p>
           </section>
         </div>
 

@@ -120,9 +120,9 @@ svg.lucide {
 }
 
 .top-bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   padding: max(12px, env(safe-area-inset-top)) 20px 10px;
 }
@@ -149,11 +149,82 @@ svg.lucide {
 .tagline {
   margin: 4px 0 0;
   font-family: var(--font-body);
-  font-size: 0.72rem;
+  font-size: 0.64rem;
   font-weight: 500;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--muted);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.top-bar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  justify-self: end;
+}
+
+.locale-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  justify-self: center;
+}
+
+.locale-toggle:hover {
+  color: var(--text);
+}
+
+.locale-toggle__code {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  line-height: 1;
+}
+
+.uk-flag-icon {
+  width: 28px;
+  height: 18px;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  background-color: transparent;
+  background-image: url("United Kingdom.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: transform 0.12s ease;
+}
+
+.locale-toggle:active .uk-flag-icon {
+  transform: scale(0.96);
+}
+
+@media (max-width: 520px) {
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .brand {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-right: 10px;
+  }
+
+  .locale-toggle {
+    justify-self: auto;
+    margin-left: auto;
+    margin-right: 12px;
+    flex-shrink: 0;
+  }
 }
 
 /* Main app tabs */
@@ -3015,6 +3086,28 @@ input.bill-line-date::-webkit-calendar-picker-indicator {
   margin-top: 4px;
 }
 
+.business-summary-row--totals {
+  margin-top: 4px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.business-summary-totals-lead {
+  grid-column: 1 / -1;
+  margin: 0 0 2px;
+}
+
+.business-summary-row--totals .business-summary-card--primary {
+  grid-column: 1 / -1;
+  border-color: rgba(var(--mint-rgb), 0.35);
+  background: rgba(var(--mint-rgb), 0.08);
+}
+
+.business-summary-row--totals .business-summary-card {
+  min-width: 0;
+}
+
 .business-summary-card .section-label {
   margin-bottom: 6px;
 }
@@ -3257,6 +3350,24 @@ input.bill-line-date::-webkit-calendar-picker-indicator {
     grid-template-columns: 1fr;
     gap: 12px;
   }
+
+  /* Keep totals cards in 2-row layout on mobile/tablet:
+     row 1 = income + expenses, row 2 = total profits */
+  .business-summary-row.row.two.business-summary-row--totals {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .business-summary-row--totals {
+    margin-top: 4px;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .business-summary-row--totals .business-summary-card--primary {
+    grid-column: 1 / -1;
+  }
+
 }
 
 /* Payoff tab: at a glance */
