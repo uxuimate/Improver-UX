@@ -264,6 +264,32 @@ svg.lucide {
   line-height: 1.55;
 }
 
+.panel-sub--autosave {
+  margin-top: 8px;
+  max-width: 36rem;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  z-index: 1000;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-border);
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: 12px;
+  top: 12px;
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
 .card-heading {
   margin: 0 0 6px;
   font-family: var(--font-display);
@@ -505,6 +531,42 @@ input[type="number"]::-webkit-inner-spin-button {
 .tiny {
   font-size: 0.7rem;
   line-height: 1.35;
+}
+
+.site-footer-legal {
+  font-family: var(--font-body);
+  text-align: center;
+  padding: 18px 14px 14px;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  font-weight: 400;
+  letter-spacing: normal;
+  color: var(--mint);
+  position: relative;
+  z-index: 1;
+}
+
+.site-footer-legal__meta {
+  margin-inline-end: 0.2em;
+  font-weight: 400;
+}
+
+.site-footer-legal__brand {
+  color: var(--blue);
+  text-decoration: none;
+  font-weight: 600;
+  margin-inline: 0.12em;
+}
+
+.site-footer-legal__end {
+  color: var(--mint);
+  font-weight: 400;
+}
+
+.site-footer-legal__brand:hover {
+  color: var(--blue-bright);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .stat {
@@ -1860,7 +1922,7 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 
-/* Collapsed by default — recording a payment doesn’t surface edit fields */
+/* Collapsed by default - recording a payment doesn’t surface edit fields */
 .debt-card-details {
   margin-top: 14px;
   padding-top: 12px;
@@ -2088,6 +2150,15 @@ input[type="number"]::-webkit-inner-spin-button {
 .money-quick-card--accent {
   border-color: rgba(var(--mint-rgb), 0.35);
   background: rgba(var(--mint-rgb), 0.08);
+}
+
+.money-quick-card--accent.money-quick-card--shortfall {
+  border-color: rgba(var(--warning-rgb), 0.5);
+  background: rgba(var(--warning-rgb), 0.12);
+}
+
+.money-quick-card__value.money-quick-card__value--shortfall {
+  color: var(--warning);
 }
 
 @media (max-width: 560px) {
@@ -2730,6 +2801,10 @@ input.bill-line-date::-webkit-calendar-picker-indicator {
 /* Selects use .field select (dark, custom chevron), loan tier is .field.loan-tier */
 
 /* Business tab */
+#businessAddCard {
+  scroll-margin-top: max(108px, calc(env(safe-area-inset-top, 0px) + 88px));
+}
+
 .business-add-card .section-label {
   margin-bottom: 8px;
 }
@@ -2944,7 +3019,7 @@ input.bill-line-date::-webkit-calendar-picker-indicator {
   margin-bottom: 6px;
 }
 
-/* Direct child only — profit card wraps its stat in .business-profit-hero */
+/* Direct child only - profit card wraps its stat in .business-profit-hero */
 .business-summary-card > .big-stat {
   margin: 10px 0 14px;
   line-height: 1.22;
@@ -3041,37 +3116,118 @@ input.bill-line-date::-webkit-calendar-picker-indicator {
   height: 14px;
 }
 
+.business-month-summary-row {
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.business-month-summary-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.business-month-summary-row:focus-visible {
+  outline: 2px solid rgba(119, 216, 186, 0.55);
+  outline-offset: -2px;
+}
+
+.business-month-summary-row td:first-child {
+  padding-left: 6px;
+}
+
+.business-month-summary-row td:first-child::before {
+  content: "▸";
+  display: inline-block;
+  width: 1.1rem;
+  margin-right: 2px;
+  opacity: 0.45;
+  font-size: 0.72rem;
+  vertical-align: middle;
+  transition: transform 0.15s ease;
+}
+
+.business-month-summary-row--open td:first-child::before {
+  content: "▾";
+  opacity: 0.65;
+}
+
+.business-month-actions-cell {
+  cursor: default;
+}
+
+.business-month-actions-cell:hover {
+  background: transparent;
+}
+
 .business-log-detail {
-  background: rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.business-log-detail--collapsed {
+  display: none;
 }
 
 .business-log-detail td {
-  padding: 10px 12px 12px;
+  padding: 10px 12px 14px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   font-size: 0.8rem;
   line-height: 1.45;
   vertical-align: top;
 }
 
-.business-log-detail summary {
-  cursor: pointer;
-  color: var(--muted);
-  font-weight: 600;
-  list-style: none;
+.business-log-detail-inner {
+  max-width: 720px;
 }
 
-.business-log-detail summary::-webkit-details-marker {
-  display: none;
+.business-log-detail-hint {
+  margin: 0 0 10px;
+}
+
+.business-log-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 18px;
+  margin-bottom: 12px;
+}
+
+.business-log-detail-col-title {
+  margin: 0 0 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.business-log-detail-actions {
+  padding-top: 4px;
+}
+
+.business-log-detail-actions .small-btn svg.lucide {
+  width: 13px;
+  height: 13px;
 }
 
 .business-log-lines {
-  margin: 8px 0 0;
+  margin: 0;
   padding-left: 1.1rem;
-  color: rgba(235, 228, 245, 0.85);
+  color: rgba(235, 228, 245, 0.88);
 }
 
 .business-log-lines li {
-  margin: 0.2em 0;
+  margin: 0.25em 0;
+}
+
+.business-log-lines-empty {
+  opacity: 0.55;
+  list-style: none;
+  padding-left: 0;
+  margin-left: 0;
+}
+
+@media (max-width: 560px) {
+  .business-log-detail-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {

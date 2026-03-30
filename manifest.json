@@ -1,6 +1,6 @@
 {
-  "name": "Improver UX",
-  "short_name": "Improver UX",
+  "name": "CalmPlan",
+  "short_name": "CalmPlan",
   "description": "UK income, bills, and debt payoff. People first.",
   "start_url": "./index.html",
   "display": "standalone",

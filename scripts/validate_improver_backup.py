@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Validate a JSON file exported from Improver UX (Profile → Export backup).
+Validate a JSON file exported from CalmPlan (Profile → Export backup).
 
 GitHub / GitHub Pages only serves the static site (HTML, JS, CSS). Your budget
 and debts are stored in the browser (localStorage) on each device. Python on
@@ -19,8 +19,8 @@ from pathlib import Path
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="Validate an Improver UX .json backup.")
-    p.add_argument("path", type=Path, help="Path to improver-ux-backup-*.json")
+    p = argparse.ArgumentParser(description="Validate a CalmPlan .json backup.")
+    p.add_argument("path", type=Path, help="Path to calmplan-backup-*.json (or any export .json)")
     args = p.parse_args()
     path: Path = args.path
     if not path.is_file():

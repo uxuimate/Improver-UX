@@ -40,6 +40,8 @@
   let authTab = "signin";
   /** When editing latest business month, holds the removed entry until save or cancel. */
   let businessEditBackup = null;
+  /** Business months table: which month row has line-item details expanded (entry id). */
+  let businessOpenDetailId = null;
 
   let monthLogSortDir = "desc";
   let businessMonthSortDir = "desc";
@@ -630,6 +632,30 @@
     if (d && typeof shouldOpen === "boolean") d.open = shouldOpen;
   }
 
+  function scrollBusinessAddCardIntoView() {
+    const card = el("businessAddCard");
+    if (!card) return;
+    const smooth = !(typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        card.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" });
+      });
+    });
+  }
+
+  function syncBusinessMonthSubmitLabel() {
+    const span = el("businessMonthSubmitLabel");
+    const btn = el("btnAddBusinessMonth");
+    const editing = !!businessEditBackup;
+    if (span) span.textContent = editing ? "Save month" : "Add month";
+    if (btn) {
+      btn.setAttribute(
+        "aria-label",
+        editing ? "Save updates to this business month" : "Add a new business month to your records"
+      );
+    }
+  }
+
   function setDebtAddDetailsOpen(shouldOpen) {
     const d = el("debtAddDetails");
     if (d && typeof shouldOpen === "boolean") d.open = shouldOpen;
@@ -879,7 +905,7 @@
           status.appendChild(document.createTextNode(" Recorded"));
         } else {
           status.classList.add("planned-debt-status-pill--none");
-          status.textContent = "—";
+          status.textContent = "-";
         }
         tdStatus.appendChild(status);
       }
@@ -1124,9 +1150,10 @@
     paintIcons();
   }
 
-  function startEditLatestBusinessMonth() {
-    if (!state.businessLog.length || businessEditBackup) return;
-    const entry = state.businessLog[0];
+  function startEditBusinessMonthAtIndex(index) {
+    if (businessEditBackup) return;
+    if (index < 0 || index >= state.businessLog.length) return;
+    const entry = state.businessLog[index];
     businessEditBackup = {
       id: entry.id,
       label: entry.label,
@@ -1135,18 +1162,25 @@
       incomeItems: Array.isArray(entry.incomeItems) ? entry.incomeItems.map((x) => ({ ...x })) : [],
       expenseItems: Array.isArray(entry.expenseItems) ? entry.expenseItems.map((x) => ({ ...x })) : [],
     };
-    state.businessLog.shift();
+    state.businessLog.splice(index, 1);
+    businessOpenDetailId = null;
     if (el("businessMonthLabel")) el("businessMonthLabel").value = businessEditBackup.label || "";
     fillBusinessDraftFromEntry(businessEditBackup);
     const lead = el("businessAddLead");
     if (lead) {
       lead.textContent =
-        "You’re editing this month. Add month to save your changes, or Cancel to restore the previous save.";
+        "You’re editing a saved month. Save month to apply your changes, or Cancel to restore the previous version.";
     }
     savePlanner();
     renderBusinessLog();
     setBusinessAddDetailsOpen(true);
     paintIcons();
+    scrollBusinessAddCardIntoView();
+  }
+
+  function startEditLatestBusinessMonth() {
+    if (!state.businessLog.length || businessEditBackup) return;
+    startEditBusinessMonthAtIndex(0);
   }
 
   function cancelLatestBusinessMonthEdit() {
@@ -1217,13 +1251,23 @@
   function buildBusinessLogRows(entry, index) {
     const { income, expenses } = businessMonthTotals(entry);
     const profit = round2(income - expenses);
-    const tr = node("tr");
+    const eid = entry.id || "";
+    const isOpen = Boolean(eid && businessOpenDetailId === eid);
+    const tr = node("tr", `business-month-summary-row${isOpen ? " business-month-summary-row--open" : ""}`);
+    tr.setAttribute("data-business-toggle", eid);
+    tr.setAttribute("role", "button");
+    tr.setAttribute("tabindex", "0");
+    tr.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    tr.setAttribute(
+      "aria-label",
+      `${entry.label || "Month"}: ${moneyFull(income)} income, ${moneyFull(expenses)} expenses. ${isOpen ? "Collapse" : "Expand"} line items.`
+    );
     [entry.label, moneyFull(income), moneyFull(expenses), moneyFull(profit)].forEach((cellText) => {
       const td = node("td");
       td.textContent = cellText;
       tr.appendChild(td);
     });
-    const tdBtn = node("td");
+    const tdBtn = node("td", "business-month-actions-cell");
     const btn = node("button", "del-snap");
     btn.type = "button";
     btn.setAttribute("aria-label", "Remove business month");
@@ -1234,33 +1278,75 @@
     tdBtn.appendChild(btn);
     tr.appendChild(tdBtn);
 
-    const incItems = Array.isArray(entry.incomeItems) ? entry.incomeItems.filter((x) => x.name || x.amount) : [];
-    const expItems = Array.isArray(entry.expenseItems) ? entry.expenseItems.filter((x) => x.name || x.amount) : [];
-    const frag = document.createDocumentFragment();
-    frag.appendChild(tr);
-    if (incItems.length + expItems.length > 0) {
-      const tr2 = node("tr", "business-log-detail");
-      const td = node("td");
-      td.colSpan = 5;
-      const det = node("details");
-      const sum = node("summary");
-      sum.textContent = "Line items";
-      const ul = node("ul", "business-log-lines");
+    const incItems = Array.isArray(entry.incomeItems)
+      ? entry.incomeItems.filter((x) => (x.name && String(x.name).trim()) || (Number(x.amount) || 0) > 0)
+      : [];
+    const expItems = Array.isArray(entry.expenseItems)
+      ? entry.expenseItems.filter((x) => (x.name && String(x.name).trim()) || (Number(x.amount) || 0) > 0)
+      : [];
+
+    const tr2 = node("tr", `business-log-detail${isOpen ? "" : " business-log-detail--collapsed"}`);
+    tr2.setAttribute("data-business-detail-for", eid);
+    const td = node("td");
+    td.colSpan = 5;
+    const inner = node("div", "business-log-detail-inner");
+    const hint = node("p", "muted small business-log-detail-hint");
+    hint.textContent =
+      "What you entered for this month. Use Adjust to change it in the form above, or click the row again to hide.";
+    const grid = node("div", "business-log-detail-grid");
+    const colInc = node("div", "business-log-detail-col");
+    const hInc = node("p", "business-log-detail-col-title");
+    hInc.textContent = "Income lines";
+    const ulInc = node("ul", "business-log-lines");
+    if (incItems.length) {
       incItems.forEach((x) => {
         const li = node("li");
-        li.textContent = `In: ${x.name || "Income"} · ${moneyFull(x.amount)}`;
-        ul.appendChild(li);
+        const name = (x.name && String(x.name).trim()) || "Income";
+        li.textContent = `${name} · ${moneyFull(x.amount)}`;
+        ulInc.appendChild(li);
       });
+    } else {
+      const li = node("li", "business-log-lines-empty");
+      li.textContent = income > 0 ? `Total ${moneyFull(income)} (no separate lines stored)` : "-";
+      ulInc.appendChild(li);
+    }
+    colInc.append(hInc, ulInc);
+    const colExp = node("div", "business-log-detail-col");
+    const hExp = node("p", "business-log-detail-col-title");
+    hExp.textContent = "Expense lines";
+    const ulExp = node("ul", "business-log-lines");
+    if (expItems.length) {
       expItems.forEach((x) => {
         const li = node("li");
-        li.textContent = `Out: ${x.name || "Expense"} · ${moneyFull(x.amount)}`;
-        ul.appendChild(li);
+        const name = (x.name && String(x.name).trim()) || "Expense";
+        li.textContent = `${name} · ${moneyFull(x.amount)}`;
+        ulExp.appendChild(li);
       });
-      det.append(sum, ul);
-      td.appendChild(det);
-      tr2.appendChild(td);
-      frag.appendChild(tr2);
+    } else {
+      const li = node("li", "business-log-lines-empty");
+      li.textContent = expenses > 0 ? `Total ${moneyFull(expenses)} (no separate lines stored)` : "-";
+      ulExp.appendChild(li);
     }
+    colExp.append(hExp, ulExp);
+    grid.append(colInc, colExp);
+    const actions = node("div", "business-log-detail-actions");
+    if (!businessEditBackup) {
+      const adj = node("button", "btn secondary small-btn btn-with-lucide");
+      adj.type = "button";
+      adj.setAttribute("data-business-edit", String(index));
+      adj.setAttribute("aria-label", `Adjust ${entry.label || "this month"}`);
+      const ip = node("i");
+      ip.setAttribute("data-lucide", "pencil");
+      adj.append(ip, document.createTextNode(" Adjust this month"));
+      actions.appendChild(adj);
+    }
+    inner.append(hint, grid, actions);
+    td.appendChild(inner);
+    tr2.appendChild(td);
+
+    const frag = document.createDocumentFragment();
+    frag.appendChild(tr);
+    frag.appendChild(tr2);
     return frag;
   }
 
@@ -1570,11 +1656,39 @@
     if (!tbody || tbody.dataset.delegateBound) return;
     tbody.dataset.delegateBound = "1";
     tbody.addEventListener("click", (e) => {
+      const editBtn = e.target.closest("[data-business-edit]");
+      if (editBtn) {
+        e.preventDefault();
+        const i = Number(editBtn.getAttribute("data-business-edit"));
+        if (!Number.isNaN(i)) startEditBusinessMonthAtIndex(i);
+        return;
+      }
       const b = e.target.closest("[data-business-del]");
-      if (!b) return;
-      const i = Number(b.getAttribute("data-business-del"));
-      state.businessLog.splice(i, 1);
-      savePlanner();
+      if (b) {
+        const i = Number(b.getAttribute("data-business-del"));
+        const removed = state.businessLog[i];
+        state.businessLog.splice(i, 1);
+        if (removed && businessOpenDetailId === removed.id) businessOpenDetailId = null;
+        savePlanner();
+        renderBusinessLog();
+        return;
+      }
+      if (e.target.closest(".business-month-actions-cell")) return;
+      const row = e.target.closest("[data-business-toggle]");
+      if (!row) return;
+      const id = row.getAttribute("data-business-toggle") || "";
+      if (!id) return;
+      businessOpenDetailId = businessOpenDetailId === id ? null : id;
+      renderBusinessLog();
+    });
+    tbody.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      const row = e.target.closest("[data-business-toggle]");
+      if (!row) return;
+      e.preventDefault();
+      const id = row.getAttribute("data-business-toggle") || "";
+      if (!id) return;
+      businessOpenDetailId = businessOpenDetailId === id ? null : id;
       renderBusinessLog();
     });
   }
@@ -2027,6 +2141,7 @@
   }
 
   function renderBusinessLog() {
+    syncBusinessMonthSubmitLabel();
     const tbody = el("businessMonthBody");
     const empty = el("businessMonthEmpty");
     const latestProfitEl = el("businessProfitMonth");
@@ -2177,6 +2292,10 @@
     if (quickExpenses) quickExpenses.textContent = moneyFull(mustPay);
     const quickLeft = el("moneyQuickLeft");
     if (quickLeft) quickLeft.textContent = moneyFull(leftForDebt);
+    const shortfall = leftForDebt < -0.005;
+    const quickLeftCard = el("moneyQuickLeftCard");
+    if (quickLeftCard) quickLeftCard.classList.toggle("money-quick-card--shortfall", shortfall);
+    if (quickLeft) quickLeft.classList.toggle("money-quick-card__value--shortfall", shortfall);
 
     savePlanner();
 
@@ -2472,7 +2591,7 @@
     } else if (!T || T <= B) {
       targetHtml = `<p class="investor-analysis-line muted">Add a target above your bankroll to see how many winning steps you’d need at different odds (e.g. 2× vs 3× per step).</p>`;
       if (monthly > 0) {
-        targetHtml += `<p class="investor-analysis-line">Planned stake this month: <strong>${moneyFull(monthly)}</strong> (not compounded into the ladder below unless you add it to bankroll).</p>`;
+        targetHtml += `<p class="investor-analysis-line">Deposits this month: <strong>${moneyFull(monthly)}</strong> (not compounded into the ladder below unless you add it to bankroll).</p>`;
       }
     } else {
       const ratio = T / B;
@@ -2486,7 +2605,7 @@
         targetHtml += `<p class="investor-analysis-line">At your ladder odds <strong>${round2(oL)}</strong>: about <strong>${nL}</strong> winning steps.</p>`;
       }
       if (monthly > 0) {
-        targetHtml += `<p class="investor-analysis-line muted small">Monthly stake ${moneyFull(monthly)} is separate from this compound path unless you bank it.</p>`;
+        targetHtml += `<p class="investor-analysis-line muted small">Monthly deposits (${moneyFull(monthly)}) are separate from this compound path unless you bank them.</p>`;
       }
     }
     outTarget.innerHTML = targetHtml;
@@ -2671,6 +2790,7 @@
       }
       const newId = businessEditBackup ? businessEditBackup.id : uid();
       businessEditBackup = null;
+      businessOpenDetailId = newId;
       state.businessLog.unshift({
         id: newId,
         label,
@@ -2813,7 +2933,7 @@
       const a = document.createElement("a");
       const stamp = new Date().toISOString().slice(0, 10);
       a.href = URL.createObjectURL(blob);
-      a.download = `improver-ux-backup-${stamp}.json`;
+      a.download = `calmplan-backup-${stamp}.json`;
       a.click();
       URL.revokeObjectURL(a.href);
       paintIcons();
@@ -2828,11 +2948,12 @@
         const text = await file.text();
         const data = JSON.parse(text);
         if (data.improverUxBackup !== 1 || !data.planner || typeof data.planner !== "object") {
-          window.alert("That file doesn’t look like an Improver UX backup.");
+          window.alert("That file doesn’t look like a CalmPlan backup.");
           return;
         }
         applyPlannerPayload(data.planner);
         businessEditBackup = null;
+        businessOpenDetailId = null;
         savePlanner();
         if (data.profile && typeof data.profile === "object") {
           state.profile.displayName = typeof data.profile.displayName === "string" ? data.profile.displayName : "";
@@ -2916,6 +3037,7 @@
       loadPlanner();
       syncFormFromState();
       businessEditBackup = null;
+      businessOpenDetailId = null;
       resetBusinessDraft();
       updateAccountPanel();
       refresh();
@@ -2926,6 +3048,7 @@
       loadPlanner();
       syncFormFromState();
       businessEditBackup = null;
+      businessOpenDetailId = null;
       resetBusinessDraft();
       updateAccountPanel();
       refresh();
@@ -2943,6 +3066,7 @@
       el("deletePassword").value = "";
       syncFormFromState();
       businessEditBackup = null;
+      businessOpenDetailId = null;
       resetBusinessDraft();
       updateAccountPanel();
       refresh();

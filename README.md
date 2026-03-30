@@ -1,4 +1,4 @@
-# Improver UX (web)
+# CalmPlan (web)
 
 Static site: open `index.html` or host on **GitHub Pages**. Keep **`Avapore.otf`** in the same folder as `styles.css` (headline font).
 
@@ -30,7 +30,7 @@ Then visit the URL it prints (e.g. `http://localhost:3000`).
 From the `web` folder, validate an exported `.json` backup:
 
 ```bash
-python scripts/validate_improver_backup.py path/to/improver-ux-backup-YYYY-MM-DD.json
+python scripts/validate_improver_backup.py path/to/calmplan-backup-YYYY-MM-DD.json
 ```
 
 ## Notes

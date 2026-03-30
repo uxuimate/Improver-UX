@@ -5,8 +5,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#050714" />
-    <meta name="description" content="Improver UX. Plan income, must-pay bills, and debt payoff. UK." />
-    <title>Improver UX</title>
+    <meta name="description" content="CalmPlan - plan income, must-pay bills, and debt payoff in one place. UK." />
+    <title>CalmPlan</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -17,12 +17,13 @@
   </head>
 
   <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     <div class="backdrop" aria-hidden="true"></div>
 
     <div class="site-header">
       <header class="top-bar">
         <div class="brand">
-          <h1 class="logo">Improver <span class="logo-ux">UX</span></h1>
+          <h1 class="logo">Calm<span class="logo-ux">Plan</span></h1>
           <p class="tagline">Your money, your debts, one calm plan</p>
         </div>
         <button type="button" class="icon-btn profile-trigger" id="btnProfile" aria-label="Open profile">
@@ -30,7 +31,7 @@
         </button>
       </header>
 
-      <nav class="app-tab-bar" role="tablist" aria-label="Improver UX sections">
+      <nav class="app-tab-bar" role="tablist" aria-label="CalmPlan sections">
         <button type="button" class="app-tab active" role="tab" id="tabBtnMoney" aria-selected="true"
         aria-controls="panelMoney" data-app-tab="money">
           <span class="app-tab-icon" aria-hidden="true"><i data-lucide="pound-sterling"></i></span>
@@ -53,19 +54,33 @@
         </button>
         <button type="button" class="app-tab" role="tab" id="tabBtnInvestor" aria-selected="false"
         aria-controls="panelInvestor" data-app-tab="investor">
-          <span class="app-tab-icon" aria-hidden="true"><i data-lucide="scale"></i></span>
-          <span class="app-tab-text">Investor</span>
+          <span class="app-tab-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+            class="lucide lucide-soccer-ball">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M11.9 6.7s-3 1.3-5 3.6c0 0 0 3.6 1.9 5.9 0 0 3.1.7 6.2 0 0 0 1.9-2.3 1.9-5.9 0 .1-2-2.3-5-3.6" />
+              <path d="M11.9 6.7V2" />
+              <path d="M16.9 10.4s3-1.4 4.5-1.6" />
+              <path d="M15 16.3s1.9 2.7 2.9 3.7" />
+              <path d="M8.8 16.3S6.9 19 6 20" />
+              <path d="M2.6 8.7C4 9 7 10.4 7 10.4" />
+            </svg>
+          </span>
+          <span class="app-tab-text">Football</span>
         </button>
       </nav>
     </div>
 
-    <main class="main">
+    <main class="main" id="main-content">
       <!-- Tab 1: Income & expenses -->
       <div class="tab-panel active" id="panelMoney" role="tabpanel" aria-labelledby="tabBtnMoney" data-panel="money">
         <div class="panel-intro">
           <h2 class="panel-title">Money this month</h2>
           <p class="panel-sub muted">Add what comes in and what has to go out. We’ll show what’s left for debt payments.
           </p>
+          <p class="panel-sub panel-sub--autosave muted small">Saves automatically on this device - export a backup from
+            Profile if you change phones or clear browser data.</p>
         </div>
 
         <!-- Synced from line sums for the rest of the app (simulate, month log, etc.) -->
@@ -81,8 +96,9 @@
             <p class="money-quick-card__label">Expenses</p>
             <p class="money-quick-card__value" id="moneyQuickExpenses">£0.00</p>
           </article>
-          <article class="money-quick-card money-quick-card--accent">
-            <p class="money-quick-card__label">Left after bills</p>
+          <article class="money-quick-card money-quick-card--accent" id="moneyQuickLeftCard"
+          aria-labelledby="moneyQuickLeftLabel">
+            <p class="money-quick-card__label" id="moneyQuickLeftLabel">Left after bills</p>
             <p class="money-quick-card__value" id="moneyQuickLeft">£0.00</p>
           </article>
         </section>
@@ -100,7 +116,8 @@
                 <span class="muted small">Total income</span>
                 <strong id="incomeItemsSum">£0</strong>
               </div>
-              <button type="button" class="btn secondary btn-with-lucide money-add-btn money-card-add-btn" id="btnAddIncomeItem">
+              <button type="button" class="btn secondary btn-with-lucide money-add-btn money-card-add-btn"
+              id="btnAddIncomeItem">
                 <i data-lucide="plus"></i> Add income
               </button>
             </div>
@@ -120,7 +137,8 @@
                 <span class="muted small">Total expenses</span>
                 <strong id="billItemsSum">£0</strong>
               </div>
-              <button type="button" class="btn secondary btn-with-lucide money-add-btn money-card-add-btn" id="btnAddBillItem">
+              <button type="button" class="btn secondary btn-with-lucide money-add-btn money-card-add-btn"
+              id="btnAddBillItem">
                 <i data-lucide="plus"></i> Add expense
               </button>
             </div>
@@ -131,8 +149,9 @@
           <details class="planned-debt-details" id="plannedDebtDetails">
             <summary class="planned-debt-details__summary">
               <span class="planned-debt-details__summary-inner">
-                <span id="planned-debts-heading" class="section-label section-label--with-icon planned-debt-details__title"
-                role="heading" aria-level="2">
+                <span id="planned-debts-heading"
+                class="section-label section-label--with-icon planned-debt-details__title" role="heading"
+                aria-level="2">
                   <i data-lucide="banknote" aria-hidden="true"></i> Planned debt
                 </span>
                 <div class="planned-debt-details__lead-total">
@@ -144,8 +163,10 @@
             </summary>
             <div class="planned-debt-details__body">
               <p class="hint muted small" id="plannedDebtsHint">
-                Add a debt and planned amount below (or edit names and amounts in the table). On <strong>Debts</strong>, use
-                the tick next to <strong>Planned (this month)</strong> when you’ve actually paid—that lowers the balance.
+                Add a debt and planned amount below (or edit names and amounts in the table). On <strong>Debts</strong>,
+                use
+                the tick next to <strong>Planned (this month)</strong> when you’ve actually paid - that lowers the
+                balance.
               </p>
               <div class="table-wrap planned-debts-table-wrap">
                 <table class="planned-debts-table" aria-label="Planned debt payments">
@@ -174,7 +195,8 @@
                     <i data-lucide="plus"></i> Add to plan
                   </button>
                 </div>
-                <p class="muted small hidden" id="plannedDebtsEmpty">No debts in your plan yet—use the form above, or add
+                <p class="muted small hidden" id="plannedDebtsEmpty">No debts in your plan yet - use the form above, or
+                  add
                   full details on the Debts tab.</p>
               </div>
             </div>
@@ -211,9 +233,11 @@
       <div class="tab-panel" id="panelDebts" role="tabpanel" aria-labelledby="tabBtnDebts" data-panel="debts">
         <div class="panel-intro">
           <h2 class="panel-title">Your debts</h2>
-          <p class="panel-sub muted">Add each debt as its own card. Optionally set <strong>Payment this month (£)</strong>
+          <p class="panel-sub muted">Add each debt as its own card. Optionally set <strong>Payment this month
+              (£)</strong>
             when you add it so we can total your plan and pre-fill <strong>Record payment</strong>. When you pay, tap
-            <strong>Record payment</strong> to lower the balance.</p>
+            <strong>Record payment</strong> to lower the balance.
+          </p>
         </div>
 
         <section class="card glass money-card debts-month-card" aria-labelledby="debts-plan-heading">
@@ -360,12 +384,14 @@
           <p class="panel-sub muted">Simple monthly tracking: income, expenses, and clear profit numbers.</p>
         </div>
 
-        <section class="card glass money-card business-add-card" aria-labelledby="business-input-heading">
+        <section class="card glass money-card business-add-card" id="businessAddCard"
+        aria-labelledby="business-input-heading">
           <details class="business-add-details" id="businessAddDetails">
             <summary class="business-add-details__summary">
               <span class="business-add-details__summary-inner">
-                <span id="business-input-heading" class="section-label section-label--with-icon business-add-details__title"
-                role="heading" aria-level="2">
+                <span id="business-input-heading"
+                class="section-label section-label--with-icon business-add-details__title" role="heading"
+                aria-level="2">
                   <i data-lucide="calendar-range" aria-hidden="true"></i>
                   Add current month
                 </span>
@@ -413,8 +439,9 @@
               </div>
 
               <p class="pay-debt-error hidden" id="businessSaveError" role="alert"></p>
-              <button type="button" class="btn secondary btn-with-lucide business-save-month" id="btnAddBusinessMonth">
-                <i data-lucide="check"></i> Add month
+              <button type="button" class="btn secondary btn-with-lucide business-save-month" id="btnAddBusinessMonth"
+              aria-label="Add month to business records">
+                <i data-lucide="check"></i> <span id="businessMonthSubmitLabel">Add month</span>
               </button>
             </div>
           </details>
@@ -424,7 +451,8 @@
           <section class="card glass money-card business-summary-card" aria-labelledby="business-profit-heading">
             <h2 id="business-profit-heading" class="section-label">Profit this month</h2>
             <p class="muted small business-latest-label" id="businessLatestMonthLabel">No month saved yet.</p>
-            <div class="business-profit-breakdown" id="businessProfitBreakdown" aria-label="Latest month income and expenses">
+            <div class="business-profit-breakdown" id="businessProfitBreakdown"
+            aria-label="Latest month income and expenses">
               <div class="business-profit-breakdown__row">
                 <span class="muted small">Income</span>
                 <strong id="businessLatestIncomeDisplay">£0.00</strong>
@@ -440,10 +468,12 @@
                 <button type="button" class="btn secondary small-btn btn-with-lucide hidden" id="btnBusinessEditLatest">
                   <i data-lucide="pencil"></i> Adjust this month
                 </button>
-                <button type="button" class="btn secondary small-btn hidden" id="btnBusinessCancelEdit">Cancel edit</button>
+                <button type="button" class="btn secondary small-btn hidden" id="btnBusinessCancelEdit">Cancel
+                  edit</button>
               </div>
             </div>
-            <p class="muted small business-summary-hint">Latest saved month. Use Adjust to edit it in the form above.</p>
+            <p class="muted small business-summary-hint">Latest saved month. Use Adjust to edit it in the form above.
+            </p>
           </section>
           <section class="card glass money-card business-summary-card" aria-labelledby="business-total-heading">
             <h2 id="business-total-heading" class="section-label">Total earnings</h2>
@@ -454,6 +484,8 @@
 
         <section class="card glass money-card" aria-labelledby="business-history-heading">
           <h2 id="business-history-heading" class="section-label">Business months</h2>
+          <p class="hint muted small">Tap or click a month to see each income and expense line. You can adjust any month
+            from the details panel.</p>
           <div class="table-wrap">
             <table class="month-table" id="businessMonthTable" aria-label="Business month records">
               <thead>
@@ -472,11 +504,11 @@
         </section>
       </div>
 
-      <!-- Tab 5: Investor (scenario math only) -->
+      <!-- Tab 5: Football (scenario math only) -->
       <div class="tab-panel" id="panelInvestor" role="tabpanel" aria-labelledby="tabBtnInvestor" data-panel="investor">
         <div class="panel-intro">
-          <h2 class="panel-title">Investor</h2>
-          <p class="panel-sub muted">Plan how a fixed monthly stake could compound. Illustrative numbers only, not
+          <h2 class="panel-title">Football</h2>
+          <p class="panel-sub muted">Plan how monthly deposits could compound. Illustrative numbers only, not
             advice or encouragement to gamble.</p>
         </div>
 
@@ -484,7 +516,7 @@
           <h2 id="inv-inputs-heading" class="section-label">What you put in</h2>
           <div class="row two">
             <label class="field">
-              <span class="field-label">Stake per month (£)</span>
+              <span class="field-label">Deposits (£)</span>
               <input type="number" id="invMonthlyStake" min="0" step="1" inputmode="decimal" />
             </label>
             <label class="field">
@@ -675,7 +707,9 @@
             <div class="data-local-block">
               <p class="section-label tight">Data on this device</p>
               <p class="tiny muted data-local-copy">
-                Your plan, profile photo, and sign-in token live in this browser’s storage only. There is no server:
+                Your numbers update and save as you type - no separate Save button. Your plan, profile photo, and
+                sign-in
+                token live in this browser’s storage only. There is no server:
                 nothing is sent to the cloud, and there is no password reset flow.
                 Publishing the app on <strong>GitHub Pages</strong> only hosts the public files (HTML/JS/CSS); it does
                 <strong>not</strong> store your numbers. Closing the app or tab on your phone usually
@@ -733,8 +767,11 @@
       </div>
     </div>
 
-    <footer class="tiny muted" style="text-align:center; padding: 14px 0 4px;">
-      All right reserved<br />Designed by UX UI MATE
+    <footer class="site-footer-legal">
+      <span class="site-footer-legal__meta">© 2026 · All rights reserved · Designed by</span>
+      <a class="site-footer-legal__brand" href="https://www.uxxuimate.com" target="_blank" rel="noopener noreferrer"
+      aria-label="UX UI MATE - open uxxuimate.com">UX UI MATE</a><span class="site-footer-legal__end"
+      aria-hidden="true">.</span>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
