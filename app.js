@@ -3343,15 +3343,6 @@
       paintIcons();
     });
 
-    // Mobile Safari can ignore label->hidden file input activation.
-    // Keep the label UX, but force an explicit file picker open.
-    el("btnImportBackup")?.addEventListener("click", (e) => {
-      const input = el("importBackupInput");
-      if (!input) return;
-      e.preventDefault();
-      input.click();
-    });
-
     el("importBackupInput")?.addEventListener("change", async (e) => {
       const file = e.target.files?.[0];
       e.target.value = "";
