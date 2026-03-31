@@ -63,6 +63,139 @@
     return currentLocale === "bg" ? bg : en;
   }
 
+  const EN_BG_TEXT = {
+    "Money": "Пари",
+    "Debts": "Дългове",
+    "Payoff": "Погасяване",
+    "Business": "Бизнес",
+    "Football": "Футбол",
+    "Income": "Приходи",
+    "Expenses": "Разходи",
+    "Left after bills": "Остава след сметките",
+    "Total income": "Общо приходи",
+    "Total expenses": "Общо разходи",
+    "Total profits": "Обща печалба",
+    "Profit this month": "Печалба този месец",
+    "Business months": "Бизнес месеци",
+    "Past months": "Минали месеци",
+    "Month": "Месец",
+    "Left": "Остава",
+    "Status": "Статус",
+    "Debt": "Дълг",
+    "Debt name": "Име на дълга",
+    "Planned debt": "Планиран дълг",
+    "Planned this month": "Планирано този месец",
+    "Planned payments this month": "Планирани плащания този месец",
+    "Add to plan": "Добави в плана",
+    "Add a debt": "Добави дълг",
+    "Add to my list": "Добави в списъка",
+    "Across all debts": "Общ преглед на всички дългове",
+    "Total still owed": "Общо оставащ дълг",
+    "Payoff plan": "План за погасяване",
+    "At a glance": "Накратко",
+    "Where spare cash could go": "Къде може да отидат свободните пари",
+    "Ways to attack the debt": "Начини за изплащане на дълга",
+    "Total debt over time": "Общ дълг във времето",
+    "Add current month": "Добави текущ месец",
+    "Line": "Ред",
+    "Total": "Общо",
+    "No month saved yet.": "Още няма запазен месец.",
+    "No business months yet.": "Още няма бизнес месеци.",
+    "No snapshots yet.": "Още няма снимки.",
+    "What you put in": "Какво влагаш",
+    "Deposits (£)": "Депозити (£)",
+    "Bankroll now (£)": "Текущ банкрол (£)",
+    "Target (£), optional": "Цел (£), по желание",
+    "Ladder legs": "Стъпки",
+    "Odds each leg": "Коефициент на стъпка",
+    "Scenario math": "Сметки по сценарий",
+    "Stay in control": "Остани в контрол",
+    "Record a payment": "Запиши плащане",
+    "Amount you paid (£)": "Платена сума (£)",
+    "Date (optional)": "Дата (по желание)",
+    "Note (optional)": "Бележка (по желание)",
+    "Save payment": "Запази плащане",
+    "Cancel": "Отказ",
+    "Add income": "Добави приход",
+    "Add expense": "Добави разход",
+    "Source": "Източник",
+    "Amount (£)": "Сума (£)",
+    "Profile": "Профил",
+    "Choose photo": "Избери снимка",
+    "Remove photo": "Премахни снимката",
+    "Display name": "Показвано име",
+    "Account": "Акаунт",
+    "Data on this device": "Данни на това устройство",
+    "Export backup (.json)": "Експортирай архив (.json)",
+    "Import backup": "Импортирай архив",
+    "Sign out": "Изход",
+    "Delete account": "Изтрий акаунт",
+    "Email": "Имейл",
+    "Confirm password": "Потвърди паролата",
+    "Sign in": "Вход",
+    "Create account": "Създай акаунт",
+    "Save month": "Запази месец",
+    "Add month": "Добави месец",
+    "Cancel edit": "Откажи редакция",
+    "Adjust this month": "Коригирай месеца",
+    "Totals from all saved business months.": "Обобщение за всички запазени бизнес месеци."
+  };
+
+  const EN_BG_ATTR = {
+    "Open profile": "Отвори профил",
+    "Switch language to BG": "Смени езика на EN",
+    "Switch language to EN": "Смени езика на BG",
+    "United Kingdom": "Великобритания",
+    "Bulgaria": "България",
+    "CalmPlan sections": "Секции на CalmPlan",
+    "Business month records": "Записи за бизнес месеци",
+    "Monthly snapshots": "Месечни снимки",
+    "Planned debt payments": "Планирани плащания по дългове",
+    "Latest month income and expenses": "Приходи и разходи за последния месец",
+    "Open uxxuimate.com": "Отвори uxxuimate.com",
+    "Skip to main content": "Към основното съдържание",
+    "e.g. March 2025": "напр. Март 2025",
+    "e.g. March 2026": "напр. Март 2026",
+    "e.g. 20000": "напр. 20000"
+  };
+
+  function reverseMap(map) {
+    const out = {};
+    Object.keys(map).forEach((k) => {
+      out[map[k]] = k;
+    });
+    return out;
+  }
+
+  function applyBulkLocaleTexts() {
+    const toBg = currentLocale === "bg";
+    const textMap = toBg ? EN_BG_TEXT : reverseMap(EN_BG_TEXT);
+    const attrMap = toBg ? EN_BG_ATTR : reverseMap(EN_BG_ATTR);
+
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const textNodes = [];
+    while (walker.nextNode()) textNodes.push(walker.currentNode);
+    textNodes.forEach((node) => {
+      const raw = node.nodeValue || "";
+      if (!raw.trim()) return;
+      const compact = raw.replace(/\s+/g, " ").trim();
+      const translated = textMap[compact];
+      if (!translated) return;
+      const lead = raw.match(/^\s*/)?.[0] || "";
+      const trail = raw.match(/\s*$/)?.[0] || "";
+      node.nodeValue = `${lead}${translated}${trail}`;
+    });
+
+    document.querySelectorAll("[placeholder]").forEach((elx) => {
+      const cur = elx.getAttribute("placeholder") || "";
+      if (attrMap[cur]) elx.setAttribute("placeholder", attrMap[cur]);
+    });
+    document.querySelectorAll("[aria-label]").forEach((elx) => {
+      const cur = elx.getAttribute("aria-label") || "";
+      if (attrMap[cur]) elx.setAttribute("aria-label", attrMap[cur]);
+    });
+  }
+
   /** Parse typed amounts (e.g. 19.99, 19,99) for business draft text inputs. */
   function parseBusinessAmountInput(raw) {
     if (raw == null) return 0;
@@ -854,6 +987,7 @@
           : "CalmPlan - plan income, must-pay bills, and debt payoff in one place. UK."
       );
     }
+    applyBulkLocaleTexts();
     paintIcons();
   }
 
