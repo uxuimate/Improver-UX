@@ -669,16 +669,24 @@
     const lang = isBg ? "bg" : "en-GB";
     document.documentElement.lang = lang;
 
+    const safeQuery = (selector) => {
+      try {
+        return document.querySelector(selector);
+      } catch (_) {
+        return null;
+      }
+    };
+
     const setText = (selector, en, bg) => {
-      const n = document.querySelector(selector);
+      const n = safeQuery(selector);
       if (n) n.textContent = isBg ? bg : en;
     };
     const setHtml = (selector, en, bg) => {
-      const n = document.querySelector(selector);
+      const n = safeQuery(selector);
       if (n) n.innerHTML = isBg ? bg : en;
     };
     const setAttr = (selector, attr, en, bg) => {
-      const n = document.querySelector(selector);
+      const n = safeQuery(selector);
       if (n) n.setAttribute(attr, isBg ? bg : en);
     };
 
@@ -814,7 +822,7 @@
     setText("#btnAddExpenseCancel", "Cancel", "Отказ");
     setText("#profileTitle", "Profile", "Профил");
     setHtml("#btnRemovePhoto", '<i data-lucide="image-off"></i> Remove photo', '<i data-lucide="image-off"></i> Премахни снимката');
-    setText('#panelProfile .field-label', "Display name", "Показвано име");
+    setText('#profileModal label[for], #profileModal .field-label', "Display name", "Показвано име");
     setText("#accountPanel .section-label.tight", "Account", "Акаунт");
     setText("#accountStatus", "Guest on this device", "Гост на това устройство");
     setText("#accountPanel .data-local-block .section-label.tight", "Data on this device", "Данни на това устройство");
