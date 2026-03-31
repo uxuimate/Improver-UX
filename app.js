@@ -827,7 +827,7 @@
     setText("#accountStatus", "Guest on this device", "Гост на това устройство");
     setText("#accountPanel .data-local-block .section-label.tight", "Data on this device", "Данни на това устройство");
     setHtml("#btnExportBackup", '<i data-lucide="download"></i> Export backup (.json)', '<i data-lucide="download"></i> Експортирай архив (.json)');
-    setHtml(".backup-import-label", '<i data-lucide="upload"></i> Import backup', '<i data-lucide="upload"></i> Импортирай архив');
+    setText(".backup-import-text", "Import backup", "Импортирай архив");
     setText("#btnSignOut", "Sign out", "Изход");
     setText("#btnDeleteAccount", "Delete account", "Изтрий акаунт");
     setText("#btnAuthSubmit", authTab === "register" ? "Create account" : "Sign in", authTab === "register" ? "Създай акаунт" : "Вход");
