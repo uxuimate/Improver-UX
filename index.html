@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#050714" />
-    <meta name="description" content="CalmPlan - plan income, must-pay bills, and debt payoff in one place. UK." />
+    <meta name="description" content="CalmPlan — plan income, must-pay bills, and debt payoff in one place. UK." />
     <title>CalmPlan</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,24 +17,17 @@
   </head>
 
   <body>
-    <a href="#main-content" class="skip-link">Skip to main content</a>
     <div class="backdrop" aria-hidden="true"></div>
 
     <div class="site-header">
       <header class="top-bar">
         <div class="brand">
           <h1 class="logo">Calm<span class="logo-ux">Plan</span></h1>
-          <p class="tagline">Your money, your debts</p>
+          <p class="tagline">Your money, your debts, one calm plan</p>
         </div>
-        <button type="button" class="locale-toggle" id="btnLocaleToggle" aria-label="Switch language to BG">
-          <span class="locale-toggle__code" id="localeCode">EN</span>
-          <span class="uk-flag-icon" id="localeFlag" role="img" aria-label="United Kingdom"></span>
+        <button type="button" class="icon-btn profile-trigger" id="btnProfile" aria-label="Open profile">
+          <span class="avatar-placeholder" id="navAvatar"></span>
         </button>
-        <div class="top-bar-actions">
-          <button type="button" class="icon-btn profile-trigger" id="btnProfile" aria-label="Open profile">
-            <span class="avatar-placeholder" id="navAvatar"></span>
-          </button>
-        </div>
       </header>
 
       <nav class="app-tab-bar" role="tablist" aria-label="CalmPlan sections">
@@ -78,15 +71,13 @@
       </nav>
     </div>
 
-    <main class="main" id="main-content">
+    <main class="main">
       <!-- Tab 1: Income & expenses -->
       <div class="tab-panel active" id="panelMoney" role="tabpanel" aria-labelledby="tabBtnMoney" data-panel="money">
         <div class="panel-intro">
           <h2 class="panel-title">Money this month</h2>
           <p class="panel-sub muted">Add what comes in and what has to go out. We’ll show what’s left for debt payments.
           </p>
-          <p class="panel-sub panel-sub--autosave muted">Saves automatically on this device - export a backup from
-            Profile if you change phones or clear browser data.</p>
         </div>
 
         <!-- Synced from line sums for the rest of the app (simulate, month log, etc.) -->
@@ -102,9 +93,8 @@
             <p class="money-quick-card__label">Expenses</p>
             <p class="money-quick-card__value" id="moneyQuickExpenses">£0.00</p>
           </article>
-          <article class="money-quick-card money-quick-card--accent" id="moneyQuickLeftCard"
-          aria-labelledby="moneyQuickLeftLabel">
-            <p class="money-quick-card__label" id="moneyQuickLeftLabel">Left after bills</p>
+          <article class="money-quick-card money-quick-card--accent">
+            <p class="money-quick-card__label">Left after bills</p>
             <p class="money-quick-card__value" id="moneyQuickLeft">£0.00</p>
           </article>
         </section>
@@ -171,7 +161,7 @@
               <p class="hint muted small" id="plannedDebtsHint">
                 Add a debt and planned amount below (or edit names and amounts in the table). On <strong>Debts</strong>,
                 use
-                the tick next to <strong>Planned (this month)</strong> when you’ve actually paid - that lowers the
+                the tick next to <strong>Planned (this month)</strong> when you’ve actually paid—that lowers the
                 balance.
               </p>
               <div class="table-wrap planned-debts-table-wrap">
@@ -201,7 +191,7 @@
                     <i data-lucide="plus"></i> Add to plan
                   </button>
                 </div>
-                <p class="muted small hidden" id="plannedDebtsEmpty">No debts in your plan yet - use the form above, or
+                <p class="muted small hidden" id="plannedDebtsEmpty">No debts in your plan yet—use the form above, or
                   add
                   full details on the Debts tab.</p>
               </div>
@@ -390,26 +380,22 @@
           <p class="panel-sub muted">Simple monthly tracking: income, expenses, and clear profit numbers.</p>
         </div>
 
-        <div class="row two business-summary-row business-summary-row--totals">
-          <p class="muted small business-summary-totals-lead" id="businessSummaryTotalsLead">Totals from all saved
-            business months.</p>
-          <section class="card glass money-card business-summary-card" aria-labelledby="business-total-income-heading">
-            <h2 id="business-total-income-heading" class="section-label">Total income</h2>
-            <p class="big-stat" id="businessTotalIncome">£0.00</p>
-          </section>
-          <section class="card glass money-card business-summary-card" aria-labelledby="business-total-expense-heading">
-            <h2 id="business-total-expense-heading" class="section-label">Total expenses</h2>
-            <p class="big-stat" id="businessTotalExpenses">£0.00</p>
-          </section>
-          <section class="card glass money-card business-summary-card business-summary-card--primary"
-          aria-labelledby="business-total-heading">
-            <h2 id="business-total-heading" class="section-label">Total profits</h2>
-            <p class="big-stat" id="businessTotalEarnings">£0.00</p>
-          </section>
-        </div>
+        <section class="money-quick-cards business-quick-cards" aria-label="Business quick totals">
+          <article class="money-quick-card">
+            <p class="money-quick-card__label">Total income</p>
+            <p class="money-quick-card__value" id="businessTotalIncomeDisplay">£0.00</p>
+          </article>
+          <article class="money-quick-card">
+            <p class="money-quick-card__label">Total expenses</p>
+            <p class="money-quick-card__value" id="businessTotalExpensesDisplay">£0.00</p>
+          </article>
+          <article class="money-quick-card money-quick-card--accent">
+            <p class="money-quick-card__label">Total profits</p>
+            <p class="money-quick-card__value" id="businessTotalProfitsDisplay">£0.00</p>
+          </article>
+        </section>
 
-        <section class="card glass money-card business-add-card" id="businessAddCard"
-        aria-labelledby="business-input-heading">
+        <section class="card glass money-card business-add-card" aria-labelledby="business-input-heading">
           <details class="business-add-details" id="businessAddDetails">
             <summary class="business-add-details__summary">
               <span class="business-add-details__summary-inner">
@@ -463,9 +449,8 @@
               </div>
 
               <p class="pay-debt-error hidden" id="businessSaveError" role="alert"></p>
-              <button type="button" class="btn secondary btn-with-lucide business-save-month" id="btnAddBusinessMonth"
-              aria-label="Add month to business records">
-                <i data-lucide="check"></i> <span id="businessMonthSubmitLabel">Add month</span>
+              <button type="button" class="btn secondary btn-with-lucide business-save-month" id="btnAddBusinessMonth">
+                <i data-lucide="check"></i> Add month
               </button>
             </div>
           </details>
@@ -473,7 +458,7 @@
 
         <div class="row two business-summary-row">
           <section class="card glass money-card business-summary-card" aria-labelledby="business-profit-heading">
-            <h2 id="business-profit-heading" class="section-label">Profit this month</h2>
+            <h2 id="business-profit-heading" class="section-label">Latest month profit</h2>
             <p class="muted small business-latest-label" id="businessLatestMonthLabel">No month saved yet.</p>
             <div class="business-profit-breakdown" id="businessProfitBreakdown"
             aria-label="Latest month income and expenses">
@@ -726,9 +711,7 @@
             <div class="data-local-block">
               <p class="section-label tight">Data on this device</p>
               <p class="tiny muted data-local-copy">
-                Your numbers update and save as you type - no separate Save button. Your plan, profile photo, and
-                sign-in
-                token live in this browser’s storage only. There is no server:
+                Your plan, profile photo, and sign-in token live in this browser’s storage only. There is no server:
                 nothing is sent to the cloud, and there is no password reset flow.
                 Publishing the app on <strong>GitHub Pages</strong> only hosts the public files (HTML/JS/CSS); it does
                 <strong>not</strong> store your numbers. Closing the app or tab on your phone usually
@@ -738,10 +721,9 @@
               <div class="backup-actions">
                 <button type="button" class="btn secondary ios-full-btn btn-with-lucide" id="btnExportBackup"><i
                   data-lucide="download"></i> Export backup (.json)</button>
-                <label class="btn secondary ios-full-btn btn-with-lucide file-label backup-import-label"
-                id="btnImportBackup">
-                  <i data-lucide="upload"></i> <span class="backup-import-text">Import backup</span>
-                  <input type="file" id="importBackupInput" class="file-input-hidden" accept="application/json,.json" />
+                <label class="btn secondary ios-full-btn btn-with-lucide file-label backup-import-label">
+                  <i data-lucide="upload"></i> Import backup
+                  <input type="file" id="importBackupInput" accept="application/json,.json" hidden />
                 </label>
               </div>
             </div>
@@ -790,7 +772,7 @@
     <footer class="site-footer-legal">
       <span class="site-footer-legal__meta">© 2026 · All rights reserved · Designed by</span>
       <a class="site-footer-legal__brand" href="https://www.uxxuimate.com" target="_blank" rel="noopener noreferrer"
-      aria-label="UX UI MATE - open uxxuimate.com">UX UI MATE</a><span class="site-footer-legal__end"
+      aria-label="UX UI MATE — open uxxuimate.com">UX UI MATE</a><span class="site-footer-legal__end"
       aria-hidden="true">.</span>
     </footer>
 

@@ -4,7 +4,6 @@
   const STORAGE = {
     sessionFp: "payoff.session.fingerprint",
     sessionEmail: "payoff.session.email",
-    locale: "calmplan.locale",
     cred: (fp) => `payoff.cred.${fp}`,
     profile: (uk) => `payoff.profile.${uk}`,
     planner: (uk) => `payoff.planner.${uk}`,
@@ -49,7 +48,6 @@
 
   let incomeDateSortDir = "desc";
   let billDateSortDir = "desc";
-  let currentLocale = "en";
 
   function uid() {
     return crypto.randomUUID();
@@ -58,11 +56,6 @@
   function round2(n) {
     return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
   }
-
-  function tr(en, bg) {
-    return currentLocale === "bg" ? bg : en;
-  }
-
 
   /** Parse typed amounts (e.g. 19.99, 19,99) for business draft text inputs. */
   function parseBusinessAmountInput(raw) {
@@ -266,9 +259,9 @@
   }
 
   function strategySubtext(r) {
-    if (r.insolvent) return tr("These numbers don’t cover every planned payment this month", "Тези числа не покриват всички планирани плащания този месец");
-    if (r.monthsToDebtFree != null) return tr("Rough interest over the journey", "Ориентировъчна лихва за периода") + `: ${moneyFull(r.totalInterest)}`;
-    return tr("On paper this mix may not reach zero, check rates and monthly payments", "По сметки този план може да не стигне до нула - провери лихвите и месечните плащания");
+    if (r.insolvent) return "These numbers don’t cover every planned payment this month";
+    if (r.monthsToDebtFree != null) return `Rough interest over the journey: ${moneyFull(r.totalInterest)}`;
+    return "On paper this mix may not reach zero, check rates and monthly payments";
   }
 
   function priorityExtraTarget(loanStates) {
@@ -286,13 +279,11 @@
     let pick;
     if (minTier === 0) {
       pick = bucket.reduce((b, x) => (x.balance < b.balance ? x : b));
-      return { name: pick.name, reason: tr("For people you know, we start with the smallest balance, quick wins and clearer heads.", "За дългове към близки започваме от най-малкия баланс - бързи резултати и по-ясна картина.") };
+      return { name: pick.name, reason: "For people you know, we start with the smallest balance, quick wins and clearer heads." };
     }
     pick = bucket.reduce((b, x) => (x.apr > b.apr ? x : b));
-    const label = minTier === 1
-      ? tr("On overdraft / bank debt", "При овърдрафт / банков дълг")
-      : tr("In this bucket", "В тази група");
-    return { name: pick.name, reason: `${label}, ${tr("the steepest rate is", "най-високата лихва е")} ${pick.apr.toFixed(1)}%, ${tr("that’s where extra hurts least to ignore.", "там допълнителното плащане има най-голям ефект.")}` };
+    const label = minTier === 1 ? "On overdraft / bank debt" : "In this bucket";
+    return { name: pick.name, reason: `${label}, the steepest rate is ${pick.apr.toFixed(1)}%, that’s where extra hurts least to ignore.` };
   }
 
   async function emailFingerprint(email) {
@@ -641,264 +632,6 @@
     if (d && typeof shouldOpen === "boolean") d.open = shouldOpen;
   }
 
-  function scrollBusinessAddCardIntoView() {
-    const card = el("businessAddCard");
-    if (!card) return;
-    const smooth = !(typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        card.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" });
-      });
-    });
-  }
-
-  function applyLocaleBadge(locale) {
-    const code = el("localeCode");
-    const flag = el("localeFlag");
-    const btn = el("btnLocaleToggle");
-    const isBg = locale === "bg";
-    if (code) code.textContent = isBg ? "BG" : "EN";
-    if (flag) {
-      flag.style.backgroundImage = isBg ? 'url("Bulgaria.png")' : 'url("United Kingdom.png")';
-      flag.setAttribute("aria-label", isBg ? "Bulgaria" : "United Kingdom");
-    }
-    if (btn) btn.setAttribute("aria-label", isBg ? "Switch language to EN" : "Switch language to BG");
-  }
-
-  function applyLocaleUI() {
-    const isBg = currentLocale === "bg";
-    const lang = isBg ? "bg" : "en-GB";
-    document.documentElement.lang = lang;
-
-    const safeQuery = (selector) => {
-      try {
-        return document.querySelector(selector);
-      } catch (_) {
-        return null;
-      }
-    };
-
-    const setText = (selector, en, bg) => {
-      const n = safeQuery(selector);
-      if (n) n.textContent = isBg ? bg : en;
-    };
-    const setHtml = (selector, en, bg) => {
-      const n = safeQuery(selector);
-      if (n) n.innerHTML = isBg ? bg : en;
-    };
-    const setAttr = (selector, attr, en, bg) => {
-      const n = safeQuery(selector);
-      if (n) n.setAttribute(attr, isBg ? bg : en);
-    };
-
-    setText(".skip-link", "Skip to main content", "Към основното съдържание");
-    setText(".tagline", "Your money, your debts", "Твоите пари, твоите дългове");
-    setAttr(".app-tab-bar", "aria-label", "CalmPlan sections", "Секции на CalmPlan");
-    setText("#tabBtnMoney .app-tab-text", "Money", "Пари");
-    setText("#tabBtnDebts .app-tab-text", "Debts", "Дългове");
-    setText("#tabBtnPayoff .app-tab-text", "Payoff", "Погасяване");
-    setText("#tabBtnBusiness .app-tab-text", "Business", "Бизнес");
-    setText("#tabBtnInvestor .app-tab-text", "Football", "Футбол");
-
-    setText("#panelMoney .panel-title", "Money this month", "Пари този месец");
-    setText(
-      "#panelMoney .panel-sub.muted",
-      "Add what comes in and what has to go out. We’ll show what’s left for debt payments.",
-      "Добави какво влиза и какво излиза. Ще ти покажем колко остава за плащания по дългове."
-    );
-    setText(
-      ".panel-sub--autosave",
-      "Saves automatically on this device - export a backup from Profile if you change phones or clear browser data.",
-      "Запазва се автоматично на това устройство - експортирай архив от Профил, ако сменяш телефон или изчистиш данните на браузъра."
-    );
-    setText("#moneyQuickLeftLabel", "Left after bills", "Остава след сметките");
-    setText(".money-quick-cards article:nth-child(1) .money-quick-card__label", "Income", "Приходи");
-    setText(".money-quick-cards article:nth-child(2) .money-quick-card__label", "Expenses", "Разходи");
-    setHtml("#money-income-heading", '<i data-lucide="wallet" aria-hidden="true"></i> Income', '<i data-lucide="wallet" aria-hidden="true"></i> Приходи');
-    setHtml("#money-expenses-heading", '<i data-lucide="receipt" aria-hidden="true"></i> Expenses', '<i data-lucide="receipt" aria-hidden="true"></i> Разходи');
-    setHtml("#btnAddIncomeItem", '<i data-lucide="plus"></i> Add income', '<i data-lucide="plus"></i> Добави приход');
-    setHtml("#btnAddBillItem", '<i data-lucide="plus"></i> Add expense', '<i data-lucide="plus"></i> Добави разход');
-    setText("#months-log-heading", "Past months", "Минали месеци");
-    setText('#panelMoney .card[aria-labelledby="months-log-heading"] .hint', "Save a snapshot when you want a record. It won’t change your live numbers.", "Запази снимка, когато искаш запис. Това не променя текущите числа.");
-    setAttr("#monthLogLabel", "placeholder", "e.g. March 2025", "напр. Март 2025");
-    setText("#monthLogTable thead th:nth-child(1)", "Month", "Месец");
-    setText("#monthLogTable thead th:nth-child(2)", "Income", "Приходи");
-    setText("#monthLogTable thead th:nth-child(3)", "Expenses", "Разходи");
-    setText("#monthLogTable thead th:nth-child(4)", "Left", "Остава");
-    setHtml("#btnAddMonthLog", '<i data-lucide="calendar-plus"></i> Save snapshot', '<i data-lucide="calendar-plus"></i> Запази снимка');
-    setText("#monthLogEmpty", "No snapshots yet.", "Още няма снимки.");
-
-    setText("#panelDebts .panel-title", "Your debts", "Твоите дългове");
-    setText("#panelDebts .panel-sub", "Add each debt as its own card. Optionally set Payment this month (£) when you add it so we can total your plan and pre-fill Record payment. When you pay, tap Record payment to lower the balance.", "Добави всеки дълг като отделна карта. По желание задай Плащане този месец (£), за да изчислим плана и да попълним Запиши плащане. Когато платиш, натисни Запиши плащане, за да намалиш остатъка.");
-    setText('#panelDebts .debts-month-card .hint', 'We add up Payment this month (£) from Add a debt (per card). Use Record payment to log what you actually paid. “What’s left” after bills comes from the Money tab.', "Събираме Плащане този месец (£) от Добави дълг (по карта). Използвай Запиши плащане, за да запишеш реално платеното. „Остава“ след сметките идва от таб Пари.");
-    setText('.debt-add-details__eyebrow', "Open to enter a new debt", "Отвори, за да въведеш нов дълг");
-    setText('#debtAddDetails .hint', "Fill this in, then Add to my list. It becomes a card you can edit, pay down, or remove anytime.", "Попълни това и натисни Добави в списъка. Ще стане карта, която можеш да редактираш, плащаш или премахваш по всяко време.");
-    setText('#debtAddDetails .field-label:nth-of-type(1)', "Who or what you owe", "На кого или за какво дължиш");
-    setText('#debtAddDetails .field-label:nth-of-type(2)', "Balance left (£)", "Оставащ баланс (£)");
-    setText('#debtAddDetails .field-label:nth-of-type(3)', "Interest rate % (0 if none)", "Лихва % (0 ако няма)");
-    setText('#debtAddDetails .field-label:nth-of-type(4)', "Payment this month (£)", "Плащане този месец (£)");
-    setText('#debtAddDetails .field-label:nth-of-type(5)', "Type (affects payoff order)", "Тип (влияе на реда за погасяване)");
-    setText('#debtDraftTier option[value="people"]', "Someone you know (friend, family…)", "Близък човек (приятел, семейство…)");
-    setText('#debtDraftTier option[value="overdraft"]', "Overdraft or bank line", "Овърдрафт или банков дълг");
-    setText('#debtDraftTier option[value="other"]', "Card, loan, Buy Now Pay Later…", "Карта, заем, купи сега плати после…");
-    setText('#debtsTotalsSection .hint', "Running total from every card above.", "Общ сбор от всички карти по-горе.");
-    setText('#debtsTotalsSection .money-lines-total .muted.small', "Total still owed", "Общо оставащ дълг");
-    setHtml("#debts-plan-heading", '<i data-lucide="banknote" aria-hidden="true"></i> Planned payments this month', '<i data-lucide="banknote" aria-hidden="true"></i> Планирани плащания този месец');
-    setHtml("#debt-add-heading", '<i data-lucide="plus-circle" aria-hidden="true"></i> Add a debt', '<i data-lucide="plus-circle" aria-hidden="true"></i> Добави дълг');
-    setHtml("#btnCommitLoan", '<i data-lucide="check"></i> Add to my list', '<i data-lucide="check"></i> Добави в списъка');
-    setHtml("#debts-totals-heading", '<i data-lucide="calculator" aria-hidden="true"></i> Across all debts', '<i data-lucide="calculator" aria-hidden="true"></i> Общ преглед на всички дългове');
-
-    setText("#panelPayoff .panel-title", "Payoff plan", "План за погасяване");
-    setText('#panelPayoff .panel-sub', "A suggested order, two classic methods to compare, and a chart of total debt shrinking.", "Предложен ред, два класически метода за сравнение и графика как общият дълг намалява.");
-    setText("#payoffAtAGlance .payoff-at-a-glance__title", "At a glance", "Накратко");
-    setText("#focusSection .section-label.tight", "Where spare cash could go", "Къде може да отидат свободните пари");
-    setText("#panelPayoff .priority-hero .card-heading", "Our default: people first", "По подразбиране: първо близки хора");
-    setText('#panelPayoff .priority-hero .tiny.muted', "Extra cash goes to people you know first (smallest balance), then overdraft (highest rate), then everything else.", "Допълнителните пари отиват първо към близки хора (най-малък баланс), после овърдрафт (най-висока лихва), после всичко останало.");
-    setText("#panelPayoff .strategy-grid .mint .card-heading", "Highest rate first (avalanche)", "Първо най-висока лихва (avalanche)");
-    setText("#panelPayoff .strategy-grid .mint .tiny.muted", "Always hit the biggest interest rate. Ignores the “people first” idea.", "Винаги атакува най-високата лихва. Игнорира „първо близки хора“.");
-    setText("#panelPayoff .strategy-grid .violet .card-heading", "Smallest balance first (snowball)", "Първо най-малък баланс (snowball)");
-    setText("#panelPayoff .strategy-grid .violet .tiny.muted", "Clear small debts for momentum. Ignores categories and rates.", "Погасява малките дългове за инерция. Игнорира категории и лихви.");
-    setText("#chartEmpty", "Add at least one debt on the Debts tab to see this chart.", "Добави поне един дълг в таб Дългове, за да видиш тази графика.");
-    setText("#strategy-heading", "Ways to attack the debt", "Начини за изплащане на дълга");
-    setText("#chart-heading", "Total debt over time", "Общ дълг във времето");
-
-    setText("#panelBusiness .panel-title", "Business", "Бизнес");
-    setText("#panelBusiness .panel-sub", "Simple monthly tracking: income, expenses, and clear profit numbers.", "Лесно месечно проследяване: приходи, разходи и ясна печалба.");
-    setText(".business-add-details__eyebrow", "Open to enter income and expenses", "Отвори, за да въведеш приходи и разходи");
-    setText("#businessMonthLabel", "", "");
-    setAttr("#businessMonthLabel", "placeholder", "e.g. March 2026", "напр. Март 2026");
-    setText('#panelBusiness .business-month-field .field-label', "Month", "Месец");
-    setText('#panelBusiness .business-draft-block--income .business-draft-block-title', "Income", "Приходи");
-    setText('#panelBusiness .business-draft-block--expense .business-draft-block-title', "Expenses", "Разходи");
-    setHtml("#btnBusinessAddIncome", '<i data-lucide="plus"></i> Line', '<i data-lucide="plus"></i> Ред');
-    setHtml("#btnBusinessAddExpense", '<i data-lucide="plus"></i> Line', '<i data-lucide="plus"></i> Ред');
-    setText('#panelBusiness .business-draft-block--income .business-draft-total .muted.small', "Total", "Общо");
-    setText('#panelBusiness .business-draft-block--expense .business-draft-total .muted.small', "Total", "Общо");
-    setText("#businessLatestMonthLabel", "No month saved yet.", "Още няма запазен месец.");
-    setText("#businessProfitBreakdown .business-profit-breakdown__row:nth-child(1) .muted.small", "Income", "Приходи");
-    setText("#businessProfitBreakdown .business-profit-breakdown__row:nth-child(2) .muted.small", "Expenses", "Разходи");
-    setHtml("#btnBusinessEditLatest", '<i data-lucide="pencil"></i> Adjust this month', '<i data-lucide="pencil"></i> Коригирай месеца');
-    setText("#btnBusinessCancelEdit", "Cancel edit", "Откажи редакция");
-    setText("#panelBusiness .business-summary-card[aria-labelledby='business-profit-heading'] .business-summary-hint", "Latest saved month. Use Adjust to edit it in the form above.", "Последно запазен месец. Използвай Коригирай, за да редактираш във формата горе.");
-    setText("#businessSummaryTotalsLead", "Totals from all saved business months.", "Обобщение за всички запазени бизнес месеци.");
-    setText('#panelBusiness [aria-labelledby="business-history-heading"] .hint', "Tap or click a month to see each income and expense line. You can adjust any month from the details panel.", "Натисни месец, за да видиш всеки ред приход и разход. Можеш да коригираш всеки месец от панела с детайли.");
-    setText("#businessMonthTable thead th:nth-child(1)", "Month", "Месец");
-    setText("#businessMonthTable thead th:nth-child(2)", "Income", "Приходи");
-    setText("#businessMonthTable thead th:nth-child(3)", "Expenses", "Разходи");
-    setText("#businessMonthTable thead th:nth-child(4)", "Profit", "Печалба");
-    setHtml("#business-input-heading", '<i data-lucide="calendar-range" aria-hidden="true"></i> Add current month', '<i data-lucide="calendar-range" aria-hidden="true"></i> Добави текущ месец');
-    setText("#business-profit-heading", "Profit this month", "Печалба този месец");
-    setText("#business-total-heading", "Total profits", "Обща печалба");
-    setText("#business-total-income-heading", "Total income", "Общо приходи");
-    setText("#business-total-expense-heading", "Total expenses", "Общо разходи");
-    setText("#business-history-heading", "Business months", "Бизнес месеци");
-    setText("#businessMonthEmpty", "No business months yet.", "Още няма бизнес месеци.");
-
-    setText("#panelInvestor .panel-title", "Football", "Футбол");
-    setText("#panelInvestor .panel-sub", "Plan how monthly deposits could compound. Illustrative numbers only, not advice or encouragement to gamble.", "Планирай как месечните депозити могат да се натрупват. Само илюстративни числа, не е съвет или насърчаване за залагане.");
-    setText("#inv-inputs-heading", "What you put in", "Какво влагаш");
-    setText('#panelInvestor .field-label', "Deposits (£)", "Депозити (£)");
-    setText('#panelInvestor .row.two .field:nth-child(2) .field-label', "Bankroll now (£)", "Текущ банкрол (£)");
-    setText('#panelInvestor .field.full .field-label', "Target (£), optional", "Цел (£), по желание");
-    setAttr("#invTarget", "placeholder", "e.g. 20000", "напр. 20000");
-    setText('#panelInvestor .row.two:nth-of-type(2) .field:nth-child(1) .field-label', "Ladder legs", "Стъпки");
-    setText('#panelInvestor .row.two:nth-of-type(2) .field:nth-child(2) .field-label', "Odds each leg", "Коефициент на стъпка");
-    setHtml("#invPreset73", '<i data-lucide="layers"></i> 7 legs × 3', '<i data-lucide="layers"></i> 7 стъпки × 3');
-    setText("#inv-out-heading", "Scenario math", "Сметки по сценарий");
-    setText("#invLadderWrap .investor-block-title", "Each day: previous balance × odds (full re-stake). Day 1 uses your bankroll as the starting amount.", "Всеки ден: предишен баланс × коефициент (пълно преиграване). Ден 1 използва банкрола като начална сума.");
-    setText("#panelInvestor .investor-footnote", "Each “step” or “day” here means one winning leg at the stated odds. Tick Done when you’ve completed that day’s leg (saved with your plan). Real outcomes are not guaranteed.", "Всяка „стъпка“ или „ден“ тук означава един печеливш ход при зададения коефициент. Отбележи Готово, когато изпълниш стъпката за деня (запазва се с плана). Реалните резултати не са гарантирани.");
-    setHtml("#inv-rem-heading", '<i data-lucide="shield-check"></i> Stay in control', '<i data-lucide="shield-check"></i> Остани в контрол');
-    setText("#panelInvestor .investor-rules li:nth-child(1)", "Cap selections: avoid stacking more than three picks on one ticket.", "Ограничи селекциите: избягвай повече от три избора в един фиш.");
-    setText("#panelInvestor .investor-rules li:nth-child(2)", "Treat this tab as a calculator, not a reason to chase losses.", "Използвай този таб като калкулатор, не като причина да гониш загуби.");
-    setText("#panelInvestor .investor-rules li:nth-child(3)", "Patience: small, rare stakes beat all-in pressure.", "Търпение: малките и редки залози са по-добри от all-in натиск.");
-
-    setText("#payDebtTitle", "Record a payment", "Запиши плащане");
-    setHtml("#btnPayDebtConfirm", '<i data-lucide="check"></i> Save payment', '<i data-lucide="check"></i> Запази плащане');
-    setText("#btnPayDebtCancel", "Cancel", "Отказ");
-    setText("#addIncomeTitle", "Add income", "Добави приход");
-    setHtml("#btnAddIncomeConfirm", '<i data-lucide="check"></i> Add income', '<i data-lucide="check"></i> Добави приход');
-    setText("#btnAddIncomeCancel", "Cancel", "Отказ");
-    setText("#addExpenseTitle", "Add expense", "Добави разход");
-    setHtml("#btnAddExpenseConfirm", '<i data-lucide="check"></i> Add expense', '<i data-lucide="check"></i> Добави разход');
-    setText("#btnAddExpenseCancel", "Cancel", "Отказ");
-    setText("#profileTitle", "Profile", "Профил");
-    setHtml("#btnRemovePhoto", '<i data-lucide="image-off"></i> Remove photo', '<i data-lucide="image-off"></i> Премахни снимката');
-    setText('#profileModal label[for], #profileModal .field-label', "Display name", "Показвано име");
-    setText("#accountPanel .section-label.tight", "Account", "Акаунт");
-    setText("#accountStatus", "Guest on this device", "Гост на това устройство");
-    setText("#accountPanel .data-local-block .section-label.tight", "Data on this device", "Данни на това устройство");
-    setHtml("#btnExportBackup", '<i data-lucide="download"></i> Export backup (.json)', '<i data-lucide="download"></i> Експортирай архив (.json)');
-    setText(".backup-import-text", "Import backup", "Импортирай архив");
-    setText("#btnSignOut", "Sign out", "Изход");
-    setText("#btnDeleteAccount", "Delete account", "Изтрий акаунт");
-    setText("#btnAuthSubmit", authTab === "register" ? "Create account" : "Sign in", authTab === "register" ? "Създай акаунт" : "Вход");
-    setText('.auth-tab[data-tab="signin"]', "Sign in", "Вход");
-    setText('.auth-tab[data-tab="register"]', "Create account", "Създай акаунт");
-    setText('#guestAuth label:nth-of-type(1) .field-label', "Email", "Имейл");
-    setText('#guestAuth label:nth-of-type(2) .field-label', "Password (min 8 characters)", "Парола (мин. 8 символа)");
-    setText('#confirmWrap .field-label', "Confirm password", "Потвърди паролата");
-
-    setHtml(
-      ".site-footer-legal__meta",
-      "© 2026 · All rights reserved · Designed by",
-      "© 2026 · Всички права запазени · Дизайн от"
-    );
-
-    const title = document.querySelector("title");
-    if (title) title.textContent = "CalmPlan";
-    const desc = document.querySelector('meta[name="description"]');
-    if (desc) {
-      desc.setAttribute(
-        "content",
-        isBg
-          ? "CalmPlan - планирай приходи, задължителни разходи и изплащане на дългове на едно място."
-          : "CalmPlan - plan income, must-pay bills, and debt payoff in one place. UK."
-      );
-    }
-    paintIcons();
-  }
-
-  function bindLocaleToggle() {
-    const btn = el("btnLocaleToggle");
-    if (!btn || btn.dataset.bound) return;
-    btn.dataset.bound = "1";
-    try {
-      const saved = localStorage.getItem(STORAGE.locale);
-      if (saved === "bg" || saved === "en") currentLocale = saved;
-    } catch (_) {}
-    applyLocaleBadge(currentLocale);
-    applyLocaleUI();
-    btn.addEventListener("click", () => {
-      currentLocale = currentLocale === "en" ? "bg" : "en";
-      applyLocaleBadge(currentLocale);
-      applyLocaleUI();
-      refresh();
-      renderInvestor();
-      try {
-        localStorage.setItem(STORAGE.locale, currentLocale);
-      } catch (_) {}
-    });
-  }
-
-  function syncBusinessMonthSubmitLabel() {
-    const span = el("businessMonthSubmitLabel");
-    const btn = el("btnAddBusinessMonth");
-    const editing = !!businessEditBackup;
-    if (span) span.textContent = editing ? (currentLocale === "bg" ? "Запази месец" : "Save month") : (currentLocale === "bg" ? "Добави месец" : "Add month");
-    if (btn) {
-      btn.setAttribute(
-        "aria-label",
-        editing
-          ? currentLocale === "bg"
-            ? "Запази промените за този бизнес месец"
-            : "Save updates to this business month"
-          : currentLocale === "bg"
-            ? "Добави нов бизнес месец към записите"
-            : "Add a new business month to your records"
-      );
-    }
-  }
-
   function setDebtAddDetailsOpen(shouldOpen) {
     const d = el("debtAddDetails");
     if (d && typeof shouldOpen === "boolean") d.open = shouldOpen;
@@ -924,21 +657,21 @@
   function buildMoneyLineRow(row, index, field, indexAttr, delAttr) {
     const wrap = node("div", "bill-line");
     const src = node("span", "money-cell-text bill-line-source");
-    src.setAttribute("aria-label", tr("Name", "Име"));
+    src.setAttribute("aria-label", "Name");
     src.textContent = row.name || "";
 
     const amt = node("span", "money-cell-text bill-line-amount money-cell-text--amount");
-    amt.setAttribute("aria-label", tr("Amount", "Сума"));
+    amt.setAttribute("aria-label", "Amount");
     // Match the existing look: amounts in the rows are displayed without the "£" symbol.
     amt.textContent = money(row.amount || 0);
 
     const dt = node("span", "money-cell-text bill-line-date money-cell-text--date");
-    dt.setAttribute("aria-label", tr("Date", "Дата"));
+    dt.setAttribute("aria-label", "Date");
     dt.textContent = formatDateDMY(row.date || "");
 
     const btn = node("button", "money-row-x bill-line-del");
     btn.type = "button";
-    btn.setAttribute("aria-label", tr("Remove line", "Премахни ред"));
+    btn.setAttribute("aria-label", "Remove line");
     btn.setAttribute(delAttr, String(index));
     const ix = node("i");
     ix.setAttribute("data-lucide", "x");
@@ -988,7 +721,7 @@
     const statusCol = node("div", "money-line-status-wrap");
     const del = node("button", "money-line-del-btn");
     del.type = "button";
-    del.setAttribute("aria-label", tr("Remove line", "Премахни ред"));
+    del.setAttribute("aria-label", "Remove line");
     del.setAttribute(delAttr, String(index));
     const ix = node("i");
     ix.setAttribute("data-lucide", "x");
@@ -1027,7 +760,7 @@
     dps.replaceChildren();
     const wrap = node("div", "ios-summary-group ios-summary-group--embedded debts-pay-ios");
     wrap.setAttribute("role", "region");
-    wrap.setAttribute("aria-label", tr("What you still plan to pay toward debts this month", "Какво още планираш да платиш по дълговете този месец"));
+    wrap.setAttribute("aria-label", "What you still plan to pay toward debts this month");
     const list = node("div", "ios-summary-list");
     list.setAttribute("role", "list");
     const headroomClass = spareAfterPlan >= 0 ? "ios-summary-value--accent" : "ios-summary-value--warn";
@@ -1106,7 +839,7 @@
       nameInp.type = "text";
       nameInp.maxLength = 120;
       nameInp.setAttribute("data-plan-name-i", String(i));
-      nameInp.setAttribute("aria-label", tr("Debt name", "Име на дълга"));
+      nameInp.setAttribute("aria-label", "Debt name");
       nameInp.placeholder = "Name";
       nameInp.value = loan.name || "";
       tdName.appendChild(nameInp);
@@ -1148,7 +881,7 @@
           status.appendChild(document.createTextNode(" Recorded"));
         } else {
           status.classList.add("planned-debt-status-pill--none");
-          status.textContent = "-";
+          status.textContent = "—";
         }
         tdStatus.appendChild(status);
       }
@@ -1235,7 +968,7 @@
       const whole = Math.max(0, Math.round(Number(amtInput && amtInput.value) || 0));
       if (!name) {
         if (errEl) {
-          errEl.textContent = tr("Enter a name for this debt.", "Въведи име за този дълг.");
+          errEl.textContent = "Enter a name for this debt.";
           errEl.classList.remove("hidden");
         }
         setPlannedDebtDetailsOpen(true);
@@ -1243,7 +976,7 @@
       }
       if (whole <= 0) {
         if (errEl) {
-          errEl.textContent = tr("Enter how much you plan to pay this month (whole pounds).", "Въведи колко планираш да платиш този месец (цяла сума).");
+          errEl.textContent = "Enter how much you plan to pay this month (whole pounds).";
           errEl.classList.remove("hidden");
         }
         setPlannedDebtDetailsOpen(true);
@@ -1276,7 +1009,7 @@
     const tdBtn = node("td");
     const btn = node("button", "del-snap");
     btn.type = "button";
-    btn.setAttribute("aria-label", tr("Remove snapshot", "Изтрий снимка"));
+    btn.setAttribute("aria-label", "Remove snapshot");
     btn.setAttribute("data-log-del", String(index));
     const ix = node("i");
     ix.setAttribute("data-lucide", "x");
@@ -1299,11 +1032,11 @@
     amt.inputMode = "decimal";
     amt.setAttribute("lang", "en-GB");
     amt.placeholder = "0.00";
-    amt.setAttribute("aria-label", tr("Amount", "Сума"));
+    amt.setAttribute("aria-label", "Amount");
     amt.setAttribute("autocomplete", "off");
     const btn = node("button", "business-draft-remove");
     btn.type = "button";
-    btn.setAttribute("aria-label", tr("Remove line", "Премахни ред"));
+    btn.setAttribute("aria-label", "Remove line");
     btn.setAttribute("data-business-draft-remove", "1");
     const ix = node("i");
     ix.setAttribute("data-lucide", "x");
@@ -1412,16 +1145,12 @@
     const lead = el("businessAddLead");
     if (lead) {
       lead.textContent =
-        tr(
-          "You’re editing a saved month. Save month to apply your changes, or Cancel to restore the previous version.",
-          "Редактираш запазен месец. Натисни „Запази месец“, за да приложиш промените, или „Отказ“, за да върнеш предишната версия."
-        );
+        "You’re editing this month. Add month to save your changes, or Cancel to restore the previous save.";
     }
     savePlanner();
     renderBusinessLog();
     setBusinessAddDetailsOpen(true);
     paintIcons();
-    scrollBusinessAddCardIntoView();
   }
 
   function startEditLatestBusinessMonth() {
@@ -1445,10 +1174,7 @@
     const lead = el("businessAddLead");
     if (lead) {
       lead.textContent =
-        tr(
-          "Add your monthly incomes, expenses, and lines as you like, then save. You can use decimals (e.g. 19.99).",
-          "Добави месечните си приходи, разходи и редове, след това запази. Може да използваш десетични стойности (напр. 19.99)."
-        );
+        "Add your monthly incomes, expenses, and lines as you like, then save. You can use decimals (e.g. 19.99).";
     }
     savePlanner();
     renderBusinessLog();
@@ -1519,7 +1245,7 @@
     const tdBtn = node("td", "business-month-actions-cell");
     const btn = node("button", "del-snap");
     btn.type = "button";
-    btn.setAttribute("aria-label", tr("Remove business month", "Изтрий бизнес месец"));
+    btn.setAttribute("aria-label", "Remove business month");
     btn.setAttribute("data-business-del", String(index));
     const ix = node("i");
     ix.setAttribute("data-lucide", "x");
@@ -1545,7 +1271,7 @@
     const grid = node("div", "business-log-detail-grid");
     const colInc = node("div", "business-log-detail-col");
     const hInc = node("p", "business-log-detail-col-title");
-    hInc.textContent = tr("Income lines", "Редове приходи");
+    hInc.textContent = "Income lines";
     const ulInc = node("ul", "business-log-lines");
     if (incItems.length) {
       incItems.forEach((x) => {
@@ -1556,13 +1282,13 @@
       });
     } else {
       const li = node("li", "business-log-lines-empty");
-      li.textContent = income > 0 ? `Total ${moneyFull(income)} (no separate lines stored)` : "-";
+      li.textContent = income > 0 ? `Total ${moneyFull(income)} (no separate lines stored)` : "—";
       ulInc.appendChild(li);
     }
     colInc.append(hInc, ulInc);
     const colExp = node("div", "business-log-detail-col");
     const hExp = node("p", "business-log-detail-col-title");
-    hExp.textContent = tr("Expense lines", "Редове разходи");
+    hExp.textContent = "Expense lines";
     const ulExp = node("ul", "business-log-lines");
     if (expItems.length) {
       expItems.forEach((x) => {
@@ -1573,7 +1299,7 @@
       });
     } else {
       const li = node("li", "business-log-lines-empty");
-      li.textContent = expenses > 0 ? `Total ${moneyFull(expenses)} (no separate lines stored)` : "-";
+      li.textContent = expenses > 0 ? `Total ${moneyFull(expenses)} (no separate lines stored)` : "—";
       ulExp.appendChild(li);
     }
     colExp.append(hExp, ulExp);
@@ -1632,13 +1358,13 @@
     const nameIn = node("input", "debt-card-title-input");
     nameIn.type = "text";
     nameIn.placeholder = "Name this debt";
-    nameIn.setAttribute("aria-label", tr("Name of debt", "Име на дълга"));
+    nameIn.setAttribute("aria-label", "Name of debt");
     nameIn.value = loan.name;
     nameIn.setAttribute("data-k", "name");
     nameIn.setAttribute("data-i", String(index));
     const rm = node("button", "btn-trash debt-card-remove");
     rm.type = "button";
-    rm.setAttribute("aria-label", tr("Remove this debt", "Премахни този дълг"));
+    rm.setAttribute("aria-label", "Remove this debt");
     rm.setAttribute("data-del", String(index));
     const irm = node("i");
     irm.setAttribute("data-lucide", "trash-2");
@@ -1655,7 +1381,7 @@
 
     const tierLab = node("label", "field loan-tier debt-card-tier");
     const tierSpan = node("span", "field-label");
-    tierSpan.textContent = tr("Type (changes suggested payoff order)", "Тип (влияе на предложения ред за погасяване)");
+    tierSpan.textContent = "Type (changes suggested payoff order)";
     const sel = node("select");
     sel.setAttribute("data-k", "tier");
     sel.setAttribute("data-i", String(index));
@@ -1674,7 +1400,7 @@
 
     const detailsDebt = node("details", "debt-card-details");
     const sumDetails = node("summary", "debt-card-details__summary");
-    sumDetails.textContent = tr("Balance, rate & type", "Баланс, лихва и тип");
+    sumDetails.textContent = "Balance, rate & type";
     const detailsBody = node("div", "debt-card-details__body");
     detailsBody.append(tierLab, fieldsDebt);
     detailsDebt.append(sumDetails, detailsBody);
@@ -1683,7 +1409,7 @@
 
     if (paidOff) {
       const po = node("p", "debt-card-paid-off muted small");
-      po.textContent = tr("Nothing left on this one. Remove it if you like, or keep it for your records.", "Този дълг е изплатен. Може да го премахнеш или да го оставиш за история.");
+      po.textContent = "Nothing left on this one. Remove it if you like, or keep it for your records.";
       article.appendChild(po);
     } else {
       const actions = node("div", "debt-card-actions");
@@ -1706,7 +1432,7 @@
       if (showPlannedRow && payments.length > 0) {
         sum.textContent = `Planned & recorded payments (${payments.length} recorded)`;
       } else if (showPlannedRow) {
-        sum.textContent = tr("Planned payment for this month", "Планирано плащане за този месец");
+        sum.textContent = "Planned payment for this month";
       } else {
         sum.textContent = `Payments you’ve recorded (${payments.length})`;
       }
@@ -1721,7 +1447,7 @@
 
         const tick = node("button", "debt-payment-complete-btn btn-with-lucide");
         tick.type = "button";
-        tick.setAttribute("aria-label", tr("Mark planned payment as paid", "Отбележи планираното плащане като платено"));
+        tick.setAttribute("aria-label", "Mark planned payment as paid");
         tick.setAttribute("data-pay-plan-complete-loan", String(index));
         const ix1 = node("i");
         ix1.setAttribute("data-lucide", "check");
@@ -1730,7 +1456,7 @@
 
         const del = node("button", "debt-payment-delete-btn");
         del.type = "button";
-        del.setAttribute("aria-label", tr("Clear planned payment for this month", "Изчисти планираното плащане за този месец"));
+        del.setAttribute("aria-label", "Clear planned payment for this month");
         del.setAttribute("data-pay-del-planned-loan", String(index));
         const ix = node("i");
         ix.setAttribute("data-lucide", "trash-2");
@@ -1751,7 +1477,7 @@
 
         const del = node("button", "debt-payment-delete-btn");
         del.type = "button";
-        del.setAttribute("aria-label", tr("Delete this recorded payment", "Изтрий това записано плащане"));
+        del.setAttribute("aria-label", "Delete this recorded payment");
         del.setAttribute("data-pay-del-loan", String(index));
         del.setAttribute("data-pay-del", String(p.id || ""));
         const ix = node("i");
@@ -2012,20 +1738,20 @@
 
     const head = node("div", "money-lines-head");
     const hName = node("span", "money-lines-head-cell");
-    hName.textContent = tr("Name", "Име");
+    hName.textContent = "Name";
     const hAmt = node("span", "money-lines-head-cell money-lines-head-cell--amount");
-    hAmt.textContent = tr("Amount", "Сума");
+    hAmt.textContent = "Amount";
     const hDate = node("span", "money-lines-head-cell money-lines-head-cell--date");
-    hDate.textContent = tr("Date", "Дата");
+    hDate.textContent = "Date";
     hDate.setAttribute("role", "button");
     hDate.tabIndex = 0;
-    hDate.setAttribute("aria-label", tr("Sort expenses by date", "Сортирай разходите по дата"));
+    hDate.setAttribute("aria-label", "Sort expenses by date");
     hDate.addEventListener("click", () => {
       billDateSortDir = billDateSortDir === "asc" ? "desc" : "asc";
       renderBillItems();
     });
     const hStatus = node("span", "money-lines-head-cell money-lines-head-cell--status");
-    hStatus.textContent = tr("Status", "Статус");
+    hStatus.textContent = "Status";
     head.append(hName, hAmt, hDate, hStatus);
     list.appendChild(head);
 
@@ -2058,20 +1784,20 @@
 
     const head = node("div", "money-lines-head");
     const hName = node("span", "money-lines-head-cell");
-    hName.textContent = tr("Name", "Име");
+    hName.textContent = "Name";
     const hAmt = node("span", "money-lines-head-cell money-lines-head-cell--amount");
-    hAmt.textContent = tr("Amount", "Сума");
+    hAmt.textContent = "Amount";
     const hDate = node("span", "money-lines-head-cell money-lines-head-cell--date");
-    hDate.textContent = tr("Date", "Дата");
+    hDate.textContent = "Date";
     hDate.setAttribute("role", "button");
     hDate.tabIndex = 0;
-    hDate.setAttribute("aria-label", tr("Sort income by date", "Сортирай приходите по дата"));
+    hDate.setAttribute("aria-label", "Sort income by date");
     hDate.addEventListener("click", () => {
       incomeDateSortDir = incomeDateSortDir === "asc" ? "desc" : "asc";
       renderIncomeItems();
     });
     const hStatus = node("span", "money-lines-head-cell money-lines-head-cell--status");
-    hStatus.textContent = tr("Status", "Статус");
+    hStatus.textContent = "Status";
     head.append(hName, hAmt, hDate, hStatus);
     list.appendChild(head);
 
@@ -2192,7 +1918,7 @@
     const suggested = round2(Math.min(remainingPlanned, bal));
     const title = el("payDebtTitle");
     const ctx = el("payDebtContext");
-    if (title) title.textContent = tr("Record a payment", "Запиши плащане");
+    if (title) title.textContent = "Record a payment";
     if (ctx) {
       const label = (loan.name || "").trim() || "this debt";
       ctx.textContent = `Lowers what you owe on “${label}”. Right now the balance is ${moneyFull(bal)}.`;
@@ -2260,14 +1986,14 @@
 
     if (!source) {
       if (errEl) {
-        errEl.textContent = tr("Add a source name (e.g. Salary / wages).", "Добави име на източника (напр. Заплата).");
+        errEl.textContent = "Add a source name (e.g. Salary / wages).";
         errEl.classList.remove("hidden");
       }
       return false;
     }
     if (!(amount > 0)) {
       if (errEl) {
-        errEl.textContent = tr("Enter an amount above zero.", "Въведи сума над нула.");
+        errEl.textContent = "Enter an amount above zero.";
         errEl.classList.remove("hidden");
       }
       return false;
@@ -2322,14 +2048,14 @@
 
     if (!source) {
       if (errEl) {
-        errEl.textContent = tr("Add a source name (e.g. Rent / housing).", "Добави име на разхода (напр. Наем).");
+        errEl.textContent = "Add a source name (e.g. Rent / housing).";
         errEl.classList.remove("hidden");
       }
       return false;
     }
     if (!(amount > 0)) {
       if (errEl) {
-        errEl.textContent = tr("Enter an amount above zero.", "Въведи сума над нула.");
+        errEl.textContent = "Enter an amount above zero.";
         errEl.classList.remove("hidden");
       }
       return false;
@@ -2390,31 +2116,28 @@
   }
 
   function renderBusinessLog() {
-    syncBusinessMonthSubmitLabel();
     const tbody = el("businessMonthBody");
     const empty = el("businessMonthEmpty");
     const latestProfitEl = el("businessProfitMonth");
-    const totalEarningsEl = el("businessTotalEarnings");
-    const totalIncomeEl = el("businessTotalIncome");
-    const totalExpensesEl = el("businessTotalExpenses");
+    const totalIncomeEl = el("businessTotalIncomeDisplay");
+    const totalExpensesEl = el("businessTotalExpensesDisplay");
+    const totalProfitsEl = el("businessTotalProfitsDisplay");
     const labEl = el("businessLatestMonthLabel");
     const incDisp = el("businessLatestIncomeDisplay");
     const expDisp = el("businessLatestExpenseDisplay");
     const editBtn = el("btnBusinessEditLatest");
     const cancelBtn = el("btnBusinessCancelEdit");
 
-    const totals = state.businessLog.reduce(
-      (acc, row) => {
-        const t = businessMonthTotals(row);
-        acc.income += t.income;
-        acc.expenses += t.expenses;
-        return acc;
-      },
-      { income: 0, expenses: 0 }
-    );
-    const totalIncome = round2(totals.income);
-    const totalExpenses = round2(totals.expenses);
-    const totalEarnings = round2(totalIncome - totalExpenses);
+    let totalIncome = 0;
+    let totalExpenses = 0;
+    state.businessLog.forEach((row) => {
+      const t = businessMonthTotals(row);
+      totalIncome += t.income;
+      totalExpenses += t.expenses;
+    });
+    totalIncome = round2(totalIncome);
+    totalExpenses = round2(totalExpenses);
+    const totalProfits = round2(totalIncome - totalExpenses);
 
     let latestProfit = 0;
     let latestInc = 0;
@@ -2436,7 +2159,7 @@
       latestProfit = round2(t0.income - t0.expenses);
       if (labEl) labEl.textContent = (state.businessLog[0].label || "").trim() || "Latest month";
     } else {
-      if (labEl) labEl.textContent = tr("No month saved yet.", "Още няма запазен месец.");
+      if (labEl) labEl.textContent = "No month saved yet.";
     }
 
     if (incDisp) incDisp.textContent = moneyFull(latestInc);
@@ -2446,9 +2169,9 @@
       latestProfitEl.classList.toggle("mint", latestProfit >= 0);
       latestProfitEl.classList.toggle("big-stat--warn", latestProfit < 0);
     }
-    if (totalEarningsEl) totalEarningsEl.textContent = moneyFull(totalEarnings);
     if (totalIncomeEl) totalIncomeEl.textContent = moneyFull(totalIncome);
     if (totalExpensesEl) totalExpensesEl.textContent = moneyFull(totalExpenses);
+    if (totalProfitsEl) totalProfitsEl.textContent = moneyFull(totalProfits);
 
     if (editBtn) editBtn.classList.toggle("hidden", state.businessLog.length === 0 || !!businessEditBackup);
     if (cancelBtn) cancelBtn.classList.toggle("hidden", !businessEditBackup);
@@ -2551,10 +2274,6 @@
     if (quickExpenses) quickExpenses.textContent = moneyFull(mustPay);
     const quickLeft = el("moneyQuickLeft");
     if (quickLeft) quickLeft.textContent = moneyFull(leftForDebt);
-    const shortfall = leftForDebt < -0.005;
-    const quickLeftCard = el("moneyQuickLeftCard");
-    if (quickLeftCard) quickLeftCard.classList.toggle("money-quick-card--shortfall", shortfall);
-    if (quickLeft) quickLeft.classList.toggle("money-quick-card__value--shortfall", shortfall);
 
     savePlanner();
 
@@ -2603,20 +2322,11 @@
 
     const rec = el("recommendation");
     if (state.loans.length === 0) {
-      rec.textContent = tr(
-        "Add what you owe on Debts and keep Money honest, then this picture matches real life.",
-        "Добави дълговете в таб „Дългове“ и поддържай таб „Пари“ актуален, за да е реална картината."
-      );
+      rec.textContent = "Add what you owe on Debts and keep Money honest, then this picture matches real life.";
     } else if (pr.insolvent || av.insolvent) {
-      rec.textContent = tr(
-        "Right now, after bills, there isn’t enough for the payments you’ve set on each debt. Fix that first; avalanche vs snowball only helps once the plan fits.",
-        "В момента след сметките няма достатъчно за плащанията, които си задал за всеки дълг. Първо оправи това; avalanche и snowball помагат, когато планът вече е реалистичен."
-      );
+      rec.textContent = "Right now, after bills, there isn’t enough for the payments you’ve set on each debt. Fix that first; avalanche vs snowball only helps once the plan fits.";
     } else if (pr.monthsToDebtFree == null) {
-      rec.textContent = tr(
-        "With these balances and rates, the maths may not reach zero, double-check interest and monthly payments.",
-        "С тези баланси и лихви сметката може да не стигне до нула - провери лихвите и месечните плащания."
-      );
+      rec.textContent = "With these balances and rates, the maths may not reach zero, double-check interest and monthly payments.";
     } else {
       const peopleCount = state.loans.filter((l) => normalizeTier(l.tier) === "people" && Number(l.balance) > 0).length;
       rec.textContent =
@@ -2784,7 +2494,7 @@
       t.setAttribute("aria-selected", on);
     });
     el("confirmWrap").classList.toggle("hidden", tab !== "register");
-    el("btnAuthSubmit").textContent = tab === "register" ? tr("Create account", "Създай акаунт") : tr("Sign in", "Вход");
+    el("btnAuthSubmit").textContent = tab === "register" ? "Create account" : "Sign in";
   }
 
   const APP_TAB_KEY = "payoff.mainTab";
@@ -2855,25 +2565,25 @@
 
     let targetHtml = "";
     if (B <= 0) {
-      targetHtml = `<p class="investor-analysis-line muted">${tr("Enter a bankroll above to run the numbers.", "Въведи начален банкрол, за да видиш сметките.")}</p>`;
+      targetHtml = `<p class="investor-analysis-line muted">Enter a bankroll above to run the numbers.</p>`;
     } else if (!T || T <= B) {
-      targetHtml = `<p class="investor-analysis-line muted">${tr("Add a target above your bankroll to see how many winning steps you’d need at different odds (e.g. 2× vs 3× per step).", "Добави цел над текущия банкрол, за да видиш колко печеливши стъпки трябват при различни коефициенти (напр. 2× срещу 3× на стъпка).")}</p>`;
+      targetHtml = `<p class="investor-analysis-line muted">Add a target above your bankroll to see how many winning steps you’d need at different odds (e.g. 2× vs 3× per step).</p>`;
       if (monthly > 0) {
-        targetHtml += `<p class="investor-analysis-line">${tr("Deposits this month", "Депозити този месец")}: <strong>${moneyFull(monthly)}</strong> (${tr("not compounded into the ladder below unless you add it to bankroll", "не се включват в схемата по-долу, освен ако не ги добавиш към банкрола")}).</p>`;
+        targetHtml += `<p class="investor-analysis-line">Deposits this month: <strong>${moneyFull(monthly)}</strong> (not compounded into the ladder below unless you add it to bankroll).</p>`;
       }
     } else {
       const ratio = T / B;
       const n2 = Math.ceil(Math.log(ratio) / Math.LN2);
       const n3 = Math.ceil(Math.log(ratio) / Math.log(3));
       const nL = oL > 1 ? Math.ceil(Math.log(ratio) / Math.log(oL)) : null;
-      targetHtml = `<p class="investor-analysis-line">${tr("Growth needed", "Необходим ръст")}: <strong>×${round2(ratio)}</strong> ${tr("from", "от")} ${moneyFull(B)} ${tr("to", "до")} ${moneyFull(T)}.</p>`;
-      targetHtml += `<p class="investor-analysis-line">${tr("At", "При")} <strong>2.0</strong> ${tr("odds every winning step", "коефициент на всяка печеливша стъпка")}: ${tr("about", "около")} <strong>${n2}</strong> ${tr("steps", "стъпки")} (${tr("e.g.", "напр.")} ${n2} ${tr("сесии при една стъпка на ден", "sessions if you do one step per day")}).</p>`;
-      targetHtml += `<p class="investor-analysis-line">${tr("At", "При")} <strong>3.0</strong> ${tr("odds every winning step", "коефициент на всяка печеливша стъпка")}: ${tr("about", "около")} <strong>${n3}</strong> ${tr("steps", "стъпки")}.</p>`;
+      targetHtml = `<p class="investor-analysis-line">Growth needed: about <strong>×${round2(ratio)}</strong> from ${moneyFull(B)} to ${moneyFull(T)}.</p>`;
+      targetHtml += `<p class="investor-analysis-line">At <strong>2.0</strong> odds every winning step: about <strong>${n2}</strong> steps (e.g. ${n2} sessions if you do one step per day).</p>`;
+      targetHtml += `<p class="investor-analysis-line">At <strong>3.0</strong> odds every winning step: about <strong>${n3}</strong> steps.</p>`;
       if (nL != null && Math.abs(oL - 2) > 0.05 && Math.abs(oL - 3) > 0.05) {
-        targetHtml += `<p class="investor-analysis-line">${tr("At your ladder odds", "При твоя коефициент")} <strong>${round2(oL)}</strong>: ${tr("about", "около")} <strong>${nL}</strong> ${tr("winning steps", "печеливши стъпки")}.</p>`;
+        targetHtml += `<p class="investor-analysis-line">At your ladder odds <strong>${round2(oL)}</strong>: about <strong>${nL}</strong> winning steps.</p>`;
       }
       if (monthly > 0) {
-        targetHtml += `<p class="investor-analysis-line muted small">${tr("Monthly deposits", "Месечните депозити")} (${moneyFull(monthly)}) ${tr("are separate from this compound path unless you bank them.", "са отделни от тази схема, освен ако не ги добавиш към банкрола.")}</p>`;
+        targetHtml += `<p class="investor-analysis-line muted small">Monthly deposits (${moneyFull(monthly)}) are separate from this compound path unless you bank them.</p>`;
       }
     }
     outTarget.innerHTML = targetHtml;
@@ -2901,7 +2611,7 @@
       }
       ladderHost.innerHTML = `<table><thead><tr><th>Done</th><th>Day</th><th>Balance</th><th>Odds</th><th>Bank</th></tr></thead><tbody>${rows.join("")}</tbody></table>`;
     } else if (ladderHost) {
-      ladderHost.innerHTML = `<p class="tiny muted">${tr("Set bankroll and ladder odds to preview each leg.", "Задай банкрол и коефициент, за да видиш всяка стъпка.")}</p>`;
+      ladderHost.innerHTML = `<p class="tiny muted">Set bankroll and ladder odds to preview each leg.</p>`;
     }
   }
 
@@ -3002,7 +2712,6 @@
     loadSession();
     loadPlanner();
     loadProfile();
-    bindLocaleToggle();
 
     syncFormFromState();
 
@@ -3051,7 +2760,7 @@
       const expenses = round2(expenseItems.reduce((s, x) => s + x.amount, 0));
       if (income <= 0 && expenses <= 0) {
         if (errEl) {
-          errEl.textContent = tr("Add at least one income or expense amount (or a label with an amount).", "Добави поне един приход или разход (или ред с име и сума).");
+          errEl.textContent = "Add at least one income or expense amount (or a label with an amount).";
           errEl.classList.remove("hidden");
         }
         setBusinessAddDetailsOpen(true);
@@ -3072,10 +2781,8 @@
       resetBusinessDraft();
       const lead = el("businessAddLead");
       if (lead) {
-        lead.textContent = tr(
-          "Add your monthly incomes, expenses, and lines as you like, then save. You can use decimals (e.g. 19.99).",
-          "Добави месечните си приходи, разходи и редове, след това запази. Може да използваш десетични стойности (напр. 19.99)."
-        );
+        lead.textContent =
+          "Add your monthly incomes, expenses, and lines as you like, then save. You can use decimals (e.g. 19.99).";
       }
       savePlanner();
       renderBusinessLog();
@@ -3094,7 +2801,7 @@
       const name = el("debtDraftName").value.trim();
       if (!name) {
         if (err) {
-          err.textContent = tr("Give this debt a name, you’ll thank yourself later.", "Дай име на този дълг - после ще ти е по-лесно.");
+          err.textContent = "Give this debt a name, you’ll thank yourself later.";
           err.classList.remove("hidden");
         }
         setDebtAddDetailsOpen(true);
@@ -3139,7 +2846,7 @@
         const amount = Number(el("payDebtAmount").value);
         if (!(amount > 0)) {
           if (errEl) {
-            errEl.textContent = tr("Enter the amount you actually paid (above zero).", "Въведи реално платената сума (над нула).");
+            errEl.textContent = "Enter the amount you actually paid (above zero).";
             errEl.classList.remove("hidden");
           }
           return;
@@ -3151,7 +2858,7 @@
           closePayDebtModal();
           refresh();
         } else if (errEl) {
-          errEl.textContent = tr("That payment didn’t apply, check the amount and balance.", "Плащането не беше приложено - провери сумата и остатъка.");
+          errEl.textContent = "That payment didn’t apply, check the amount and balance.";
           errEl.classList.remove("hidden");
         }
       });
@@ -3214,12 +2921,12 @@
       const file = e.target.files?.[0];
       e.target.value = "";
       if (!file) return;
-      if (!window.confirm(tr("Replace everything in this app on this device with this backup?", "Да заменя ли всички данни в приложението на това устройство с този архив?"))) return;
+      if (!window.confirm("Replace everything in this app on this device with this backup?")) return;
       try {
         const text = await file.text();
         const data = JSON.parse(text);
         if (data.improverUxBackup !== 1 || !data.planner || typeof data.planner !== "object") {
-          window.alert(tr("That file doesn’t look like a CalmPlan backup.", "Този файл не изглежда като архив на CalmPlan."));
+          window.alert("That file doesn’t look like a CalmPlan backup.");
           return;
         }
         applyPlannerPayload(data.planner);
@@ -3243,7 +2950,7 @@
         refresh();
         paintIcons();
       } catch (_) {
-        window.alert(tr("Could not read that backup file.", "Не успях да прочета този архивен файл."));
+        window.alert("Could not read that backup file.");
       }
     });
 
