@@ -21,44 +21,61 @@
 
     <div class="site-header">
       <header class="top-bar">
-        <div class="brand">
+        <div class="brand top-bar__brand">
           <h1 class="logo">Calm<span class="logo-ux">Plan</span></h1>
           <p class="tagline">Your money, your debts, one calm plan</p>
         </div>
-        <button type="button" class="icon-btn profile-trigger" id="btnProfile" aria-label="Open profile">
-          <span class="avatar-placeholder" id="navAvatar"></span>
-        </button>
+        <div class="top-bar__actions">
+          <button type="button" class="icon-btn nav-menu-btn" id="btnNavMenu" aria-label="Open menu"
+          aria-expanded="false" aria-controls="navDrawer">
+            <i data-lucide="menu"></i>
+          </button>
+        </div>
       </header>
+    </div>
 
-      <nav class="app-tab-bar" role="tablist" aria-label="CalmPlan sections">
-        <button type="button" class="app-tab active" role="tab" id="tabBtnMoney" aria-selected="true"
-        aria-controls="panelMoney" data-app-tab="money">
-          <span class="app-tab-icon" aria-hidden="true"><i data-lucide="pound-sterling"></i></span>
-          <span class="app-tab-text">Money</span>
+    <div class="nav-drawer-overlay hidden" id="navDrawerOverlay" aria-hidden="true"></div>
+    <aside class="nav-drawer nav-drawer--right hidden" id="navDrawer" role="dialog" aria-modal="true"
+    aria-labelledby="navDrawerTitle" aria-hidden="true">
+      <div class="nav-drawer__head">
+        <p id="navDrawerTitle" class="nav-drawer__title">Menu</p>
+        <button type="button" class="icon-btn nav-drawer__close" id="btnNavDrawerClose" aria-label="Close menu">
+          <i data-lucide="x"></i>
         </button>
-        <button type="button" class="app-tab" role="tab" id="tabBtnDebts" aria-selected="false"
-        aria-controls="panelDebts" data-app-tab="debts">
-          <span class="app-tab-icon" aria-hidden="true"><i data-lucide="layers"></i></span>
-          <span class="app-tab-text">Debts</span>
+      </div>
+      <div class="nav-drawer__profile-card">
+        <div class="nav-drawer__avatar-ring">
+          <span class="avatar-placeholder nav-drawer__avatar" id="navAvatar" aria-hidden="true"></span>
+        </div>
+        <p class="nav-drawer__display-name" id="navDrawerDisplayName">Guest</p>
+        <p class="nav-drawer__email muted small hidden" id="navDrawerEmail"></p>
+      </div>
+      <p class="nav-drawer__section-label">Your plan</p>
+      <nav class="nav-drawer__list" aria-label="Main sections">
+        <button type="button" class="nav-drawer__item" data-app-tab="money">
+          <span class="nav-drawer__icon" aria-hidden="true"><i data-lucide="pound-sterling"></i></span>
+          <span class="nav-drawer__text">Money</span>
         </button>
-        <button type="button" class="app-tab" role="tab" id="tabBtnPayoff" aria-selected="false"
-        aria-controls="panelPayoff" data-app-tab="payoff">
-          <span class="app-tab-icon" aria-hidden="true"><i data-lucide="trending-down"></i></span>
-          <span class="app-tab-text">Payoff</span>
+        <button type="button" class="nav-drawer__item" data-app-tab="debts">
+          <span class="nav-drawer__icon" aria-hidden="true"><i data-lucide="layers"></i></span>
+          <span class="nav-drawer__text">Debts</span>
         </button>
-        <button type="button" class="app-tab" role="tab" id="tabBtnBusiness" aria-selected="false"
-        aria-controls="panelBusiness" data-app-tab="business">
-          <span class="app-tab-icon" aria-hidden="true"><i data-lucide="briefcase-business"></i></span>
-          <span class="app-tab-text">Business</span>
+        <button type="button" class="nav-drawer__item" data-app-tab="payoff">
+          <span class="nav-drawer__icon" aria-hidden="true"><i data-lucide="trending-down"></i></span>
+          <span class="nav-drawer__text">Payoff</span>
         </button>
-        <button type="button" class="app-tab" role="tab" id="tabBtnInvestor" aria-selected="false"
-        aria-controls="panelInvestor" data-app-tab="investor">
-          <span class="app-tab-icon" aria-hidden="true">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+        <button type="button" class="nav-drawer__item" data-app-tab="business">
+          <span class="nav-drawer__icon" aria-hidden="true"><i data-lucide="briefcase-business"></i></span>
+          <span class="nav-drawer__text">Business</span>
+        </button>
+        <button type="button" class="nav-drawer__item" data-app-tab="investor">
+          <span class="nav-drawer__icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
             class="lucide lucide-soccer-ball">
               <circle cx="12" cy="12" r="10" />
-              <path d="M11.9 6.7s-3 1.3-5 3.6c0 0 0 3.6 1.9 5.9 0 0 3.1.7 6.2 0 0 0 1.9-2.3 1.9-5.9 0 .1-2-2.3-5-3.6" />
+              <path
+              d="M11.9 6.7s-3 1.3-5 3.6c0 0 0 3.6 1.9 5.9 0 0 3.1.7 6.2 0 0 0 1.9-2.3 1.9-5.9 0 .1-2-2.3-5-3.6" />
               <path d="M11.9 6.7V2" />
               <path d="M16.9 10.4s3-1.4 4.5-1.6" />
               <path d="M15 16.3s1.9 2.7 2.9 3.7" />
@@ -66,14 +83,34 @@
               <path d="M2.6 8.7C4 9 7 10.4 7 10.4" />
             </svg>
           </span>
-          <span class="app-tab-text">Football</span>
+          <span class="nav-drawer__text">Football</span>
         </button>
       </nav>
-    </div>
+      <div class="nav-drawer__premium-tools">
+        <p class="nav-drawer__section-label">Data &amp; account</p>
+        <div class="nav-drawer__tool-grid">
+          <button type="button" class="nav-drawer__tool-btn" id="navDrawerBtnSave">
+            <i data-lucide="save" aria-hidden="true"></i><span>Save</span>
+          </button>
+          <button type="button" class="nav-drawer__tool-btn" id="navDrawerBtnExport">
+            <i data-lucide="download" aria-hidden="true"></i><span>Export</span>
+          </button>
+          <button type="button" class="nav-drawer__tool-btn" id="navDrawerBtnImport">
+            <i data-lucide="upload" aria-hidden="true"></i><span>Import</span>
+          </button>
+          <button type="button" class="nav-drawer__tool-btn" id="navDrawerBtnProfile">
+            <i data-lucide="user" aria-hidden="true"></i><span>Profile</span>
+          </button>
+        </div>
+        <p class="nav-drawer__save-toast tiny muted hidden" id="navDrawerSaveToast" role="status">Saved to this device.
+        </p>
+        <button type="button" class="nav-drawer__sign-out hidden" id="navDrawerBtnSignOut">Sign out</button>
+      </div>
+    </aside>
 
     <main class="main">
       <!-- Tab 1: Income & expenses -->
-      <div class="tab-panel active" id="panelMoney" role="tabpanel" aria-labelledby="tabBtnMoney" data-panel="money">
+      <div class="tab-panel active" id="panelMoney" role="region" aria-label="Money" data-panel="money">
         <div class="panel-intro">
           <h2 class="panel-title">Money this month</h2>
           <p class="panel-sub muted">Add what comes in and what has to go out. We’ll show what’s left for debt payments.
@@ -226,22 +263,53 @@
       </div>
 
       <!-- Tab 2: Debts -->
-      <div class="tab-panel" id="panelDebts" role="tabpanel" aria-labelledby="tabBtnDebts" data-panel="debts">
+      <div class="tab-panel" id="panelDebts" role="region" aria-label="Debts" data-panel="debts">
         <div class="panel-intro">
           <h2 class="panel-title">Your debts</h2>
-          <p class="panel-sub muted">Add each debt as its own card. Optionally set <strong>Payment this month
-              (£)</strong>
-            when you add it so we can total your plan and pre-fill <strong>Record payment</strong>. When you pay, tap
-            <strong>Record payment</strong> to lower the balance.
+          <p class="panel-sub muted">Add each debt as its own card in <strong>£</strong> or <strong>€</strong>. Set
+            <strong>payment this month</strong> in that same currency so we can total your plan (converted to £) and
+            pre-fill <strong>Record payment</strong>. When you pay, tap <strong>Record payment</strong> to lower the
+            balance.
           </p>
         </div>
+
+        <section class="card glass money-card debts-at-a-glance" aria-labelledby="debts-glance-heading">
+          <h2 id="debts-glance-heading" class="section-label section-label--with-icon">
+            <i data-lucide="percent" aria-hidden="true"></i> At a glance
+          </h2>
+          <p class="hint muted small">Quick scan of who you owe and how big each piece is. Tap a row to jump to that
+            card. Full editing stays in the cards below.</p>
+          <div class="debts-glance-grid">
+            <div class="debts-glance-table-wrap table-wrap">
+              <table class="debts-scan-table" aria-label="Debts overview">
+                <thead>
+                  <tr>
+                    <th>Debt</th>
+                    <th>Owed</th>
+                    <th>Share</th>
+                  </tr>
+                </thead>
+                <tbody id="debtsScanBody"></tbody>
+              </table>
+              <p class="muted small hidden" id="debtsScanEmpty">No balances to show yet — add a debt below.</p>
+            </div>
+            <div class="debts-glance-chart">
+              <div class="debts-share-chart-wrap">
+                <canvas id="debtShareChart" aria-label="Share of total debt"></canvas>
+              </div>
+              <p class="muted small hidden" id="debtShareChartEmpty">Chart appears when you have at least one balance.
+              </p>
+            </div>
+          </div>
+        </section>
 
         <section class="card glass money-card debts-month-card" aria-labelledby="debts-plan-heading">
           <h2 id="debts-plan-heading" class="section-label section-label--with-icon">
             <i data-lucide="banknote" aria-hidden="true"></i> Planned payments this month
           </h2>
-          <p class="hint muted small">We add up <strong>Payment this month (£)</strong> from <strong>Add a debt</strong>
-            (per card). Use <strong>Record payment</strong> to log what you actually paid. “What’s left” after bills
+              <p class="hint muted small">We add up each debt’s <strong>payment this month</strong> (in that debt’s currency)
+            from <strong>Add a debt</strong>, then convert to pounds for the total using your <strong>£ per €1</strong> in
+            Profile (e.g. Revolut). Use <strong>Record payment</strong> to log what you paid. “What’s left” after bills
             comes from the Money tab.</p>
           <div id="debtsPaySummary" class="debts-pay-summary hidden" aria-live="polite"></div>
         </section>
@@ -266,8 +334,15 @@
                   <input type="text" id="debtDraftName" maxlength="120" placeholder="e.g. Mum, Monzo overdraft, PayPal"
                   autocomplete="off" />
                 </label>
+                <label class="field full">
+                  <span class="field-label">Debt currency</span>
+                  <select id="debtDraftCurrency">
+                    <option value="GBP" selected>Pounds (£)</option>
+                    <option value="EUR">Euros (€)</option>
+                  </select>
+                </label>
                 <label class="field">
-                  <span class="field-label">Balance left (£)</span>
+                  <span class="field-label">Balance left (in that currency)</span>
                   <input type="number" id="debtDraftBalance" min="0" step="0.01" inputmode="decimal" placeholder="0" />
                 </label>
                 <label class="field">
@@ -275,7 +350,7 @@
                   <input type="number" id="debtDraftApr" min="0" step="0.1" inputmode="decimal" placeholder="0" />
                 </label>
                 <label class="field full">
-                  <span class="field-label">Payment this month (£)</span>
+                  <span class="field-label">Payment this month (same currency)</span>
                   <input type="number" id="debtDraftPayment" min="0" step="0.01" inputmode="decimal" placeholder="0" />
                 </label>
                 <label class="field full">
@@ -302,17 +377,19 @@
           <h2 id="debts-totals-heading" class="section-label section-label--with-icon">
             <i data-lucide="calculator" aria-hidden="true"></i> Across all debts
           </h2>
-          <p class="hint muted small">Running total from every card above.</p>
+          <p class="hint muted small">Running total from every card above (pound equivalent).</p>
           <div class="money-lines-total money-lines-total--debts debt-totals-hero">
             <span class="muted small">Total still owed</span>
             <strong id="totalDebt">£0</strong>
           </div>
+          <p class="muted small hidden" id="debtsTotalConversionHint">Euro balances are included using your <strong>£ per
+            €1</strong> rate from Profile — update it when Revolut (or your bank) shows a new rate.</p>
           <p class="muted small debts-by-tier hidden" id="debtByTier"></p>
         </section>
       </div>
 
       <!-- Tab 3: Payoff -->
-      <div class="tab-panel" id="panelPayoff" role="tabpanel" aria-labelledby="tabBtnPayoff" data-panel="payoff">
+      <div class="tab-panel" id="panelPayoff" role="region" aria-label="Payoff" data-panel="payoff">
         <div class="panel-intro">
           <h2 class="panel-title">Payoff plan</h2>
           <p class="panel-sub muted">A suggested order, two classic methods to compare, and a chart of total debt
@@ -374,7 +451,7 @@
       </div>
 
       <!-- Tab 4: Business -->
-      <div class="tab-panel" id="panelBusiness" role="tabpanel" aria-labelledby="tabBtnBusiness" data-panel="business">
+      <div class="tab-panel" id="panelBusiness" role="region" aria-label="Business" data-panel="business">
         <div class="panel-intro">
           <h2 class="panel-title">Business</h2>
           <p class="panel-sub muted">Simple monthly tracking: income, expenses, and clear profit numbers.</p>
@@ -509,7 +586,7 @@
       </div>
 
       <!-- Tab 5: Football (scenario math only) -->
-      <div class="tab-panel" id="panelInvestor" role="tabpanel" aria-labelledby="tabBtnInvestor" data-panel="investor">
+      <div class="tab-panel" id="panelInvestor" role="region" aria-label="Football" data-panel="investor">
         <div class="panel-intro">
           <h2 class="panel-title">Football</h2>
           <p class="panel-sub muted">Plan how monthly deposits could compound. Illustrative numbers only, not
@@ -587,7 +664,7 @@
           <p class="muted small pay-debt-context" id="payDebtContext"></p>
           <input type="hidden" id="payDebtLoanIndex" value="" />
           <label class="field full">
-            <span class="field-label">Amount you paid (£)</span>
+            <span class="field-label" id="payDebtAmountLabel">Amount you paid (pounds)</span>
             <input type="number" id="payDebtAmount" min="0" step="0.01" inputmode="decimal" />
           </label>
           <label class="field full">
@@ -703,6 +780,27 @@
             <span class="field-label">Display name</span>
             <input type="text" id="displayName" maxlength="80" autocomplete="name" />
           </label>
+
+          <div class="currency-prefs-block">
+            <p class="section-label tight">Pounds, euros &amp; rate</p>
+            <p class="tiny muted"><strong>Money</strong> (income &amp; bills) stays in pounds. Each <strong>debt</strong> can
+              be in £ or €; combined totals and your plan convert euro debts using <strong>£ per €1</strong> — copy the
+              rate from Revolut (or similar) when you want it fresh. <strong>Show amounts in</strong> below only affects
+              how pound-based figures are displayed elsewhere (optional euro view).</p>
+            <div class="row two currency-prefs-row">
+              <label class="field">
+                <span class="field-label">Show amounts in</span>
+                <select id="prefDisplayCurrency">
+                  <option value="GBP">Pound (£)</option>
+                  <option value="EUR">Euro (€)</option>
+                </select>
+              </label>
+              <label class="field" id="prefGbpPerEurWrap">
+                <span class="field-label">£ per €1 (for € debts)</span>
+                <input type="number" id="prefGbpPerEur" min="0.01" step="0.01" inputmode="decimal" placeholder="0.86" />
+              </label>
+            </div>
+          </div>
 
           <div class="account-panel" id="accountPanel">
             <p class="section-label tight">Account</p>

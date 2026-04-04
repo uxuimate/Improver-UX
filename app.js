@@ -34,9 +34,11 @@
     businessLog: [],
     loans: [],
     investor: { monthlyStake: 0, bankroll: 0, target: 0, ladderLegs: 7, ladderOdds: 3, completedLegs: [] },
+    preferences: { currency: "GBP", gbpPerEur: 0.86 },
   };
 
   let chartInstance = null;
+  let debtShareChartInstance = null;
   let authTab = "signin";
   /** When editing latest business month, holds the removed entry until save or cancel. */
   let businessEditBackup = null;
@@ -94,12 +96,74 @@
     });
   }
 
+  function mergePreferences(raw) {
+    const d = raw && typeof raw === "object" ? raw : {};
+    const currency = d.currency === "EUR" ? "EUR" : "GBP";
+    let gbpPerEur = Number(d.gbpPerEur);
+    if (!Number.isFinite(gbpPerEur) || gbpPerEur <= 0) gbpPerEur = 0.86;
+    return { currency, gbpPerEur: round2(gbpPerEur) };
+  }
+
+  function displayCurrency() {
+    return state.preferences && state.preferences.currency === "EUR" ? "EUR" : "GBP";
+  }
+
+  function gbpPerEurRate() {
+    const r = Number(state.preferences && state.preferences.gbpPerEur);
+    return Number.isFinite(r) && r > 0 ? r : 0.86;
+  }
+
+  /** Each debt is stored in its own currency; this is how we compare and sum with pounds. */
+  function loanCurrency(loan) {
+    return loan && loan.currency === "EUR" ? "EUR" : "GBP";
+  }
+
+  function loanAmountToGbp(loan, amount) {
+    const a = Number(amount) || 0;
+    if (loanCurrency(loan) === "GBP") return round2(a);
+    return round2(a * gbpPerEurRate());
+  }
+
+  function hasAnyEuroDebt() {
+    return state.loans.some((l) => loanCurrency(l) === "EUR");
+  }
+
+  /** Format an amount that lives in the loan's currency (not converted). */
+  function formatMoneyLoanCurrency(amount, currency, compact) {
+    const c = currency === "EUR" ? "EUR" : "GBP";
+    const opts = {
+      style: "currency",
+      currency: c,
+      minimumFractionDigits: compact ? 0 : 2,
+      maximumFractionDigits: compact ? 0 : 2,
+    };
+    return new Intl.NumberFormat("en-GB", opts).format(Number(amount) || 0);
+  }
+
+  /** Stored amounts are always GBP; convert for display when euros are selected. */
+  function gbpToDisplayAmount(gbp) {
+    const a = Number(gbp) || 0;
+    if (displayCurrency() === "GBP") return a;
+    return round2(a / gbpPerEurRate());
+  }
+
   function money(n) {
-    return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(n);
+    const d = gbpToDisplayAmount(n);
+    return new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency: displayCurrency(),
+      maximumFractionDigits: 0,
+    }).format(d);
   }
 
   function moneyFull(n) {
-    return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+    const d = gbpToDisplayAmount(n);
+    return new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency: displayCurrency(),
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(d);
   }
 
   function padInvestorCompleted(inv) {
@@ -174,9 +238,9 @@
     const states = loans.map((l) => ({
       id: l.id,
       name: l.name,
-      balance: Math.max(0, Number(l.balance) || 0),
+      balance: loanAmountToGbp(l, Math.max(0, Number(l.balance) || 0)),
       annualRatePercent: Math.max(0, Number(l.apr) || 0),
-      minimumPayment: Math.max(0, Number(l.monthlyPayment) || 0),
+      minimumPayment: loanAmountToGbp(l, Math.max(0, Number(l.monthlyPayment) || 0)),
       tier: normalizeTier(l.tier),
     }));
 
@@ -267,7 +331,7 @@
   function priorityExtraTarget(loanStates) {
     const states = loanStates.map((l, i) => ({
       name: l.name,
-      balance: Number(l.balance) || 0,
+      balance: loanAmountToGbp(l, Number(l.balance) || 0),
       apr: Number(l.apr) || 0,
       tier: normalizeTier(l.tier),
       i,
@@ -377,6 +441,7 @@
         0,
         Number(l.monthlyPayment) || (Number(l.minPayment) || 0) + (Number(l.extraMonthly) || 0)
       );
+      const currency = l.currency === "EUR" ? "EUR" : "GBP";
       return {
         id: l.id || uid(),
         name: typeof l.name === "string" ? l.name : "",
@@ -384,6 +449,7 @@
         apr: Number(l.apr) || 0,
         monthlyPayment,
         tier: normalizeTier(l.tier),
+        currency,
         payments: rawPay,
       };
     });
@@ -468,6 +534,7 @@
       : [];
     state.businessLog = Array.isArray(o.businessLog) ? o.businessLog.map(businessEntryFromRaw) : [];
     state.investor = mergeInvestor(o.investor);
+    state.preferences = mergePreferences(o.preferences);
     return true;
   }
 
@@ -494,6 +561,7 @@
       state.businessLog = [];
       state.loans = SAMPLE_LOANS.map((l) => ({ ...l, id: uid() }));
       state.investor = defaultInvestorGuest();
+      state.preferences = mergePreferences(null);
     } else {
       state.budget = { income: 0, mustPayBills: 0 };
       state.incomeItems = [];
@@ -502,6 +570,7 @@
       state.businessLog = [];
       state.loans = [];
       state.investor = mergeInvestor(null);
+      state.preferences = mergePreferences(null);
     }
   }
 
@@ -519,6 +588,7 @@
         businessLog: state.businessLog,
         loans: state.loans,
         investor: state.investor,
+        preferences: state.preferences,
       })
     );
   }
@@ -564,6 +634,38 @@
     const key = plannerKeyFromSession();
     if (dataUrl) localStorage.setItem(STORAGE.photo(key), dataUrl);
     else localStorage.removeItem(STORAGE.photo(key));
+  }
+
+  function buildBackupObject() {
+    return {
+      improverUxBackup: 1,
+      exportedAt: new Date().toISOString(),
+      planner: {
+        income: state.budget.income,
+        mustPayBills: state.budget.mustPayBills,
+        incomeItems: state.incomeItems,
+        billItems: state.billItems,
+        monthLog: state.monthLog,
+        businessLog: state.businessLog,
+        loans: state.loans,
+        investor: state.investor,
+        preferences: state.preferences,
+      },
+      profile: { displayName: state.profile.displayName || "" },
+      photoDataUrl: getPhotoDataUrl() || null,
+    };
+  }
+
+  function runExportBackup() {
+    const payload = buildBackupObject();
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.href = URL.createObjectURL(blob);
+    a.download = `calmplan-backup-${stamp}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    paintIcons();
   }
 
   async function registerAccount(email, password, confirm) {
@@ -625,6 +727,36 @@
 
   function el(id) {
     return document.getElementById(id);
+  }
+
+  let navDrawerSaveToastTimer = null;
+  function flashNavDrawerSaveToast() {
+    const t = el("navDrawerSaveToast");
+    if (!t) return;
+    t.classList.remove("hidden");
+    if (navDrawerSaveToastTimer) clearTimeout(navDrawerSaveToastTimer);
+    navDrawerSaveToastTimer = setTimeout(() => t.classList.add("hidden"), 2500);
+  }
+
+  function updateNavDrawerChrome() {
+    const nameEl = el("navDrawerDisplayName");
+    const emailEl = el("navDrawerEmail");
+    const signOutBtn = el("navDrawerBtnSignOut");
+    if (nameEl) {
+      const n = state.profile.displayName?.trim();
+      nameEl.textContent = n || "Guest";
+    }
+    if (emailEl) {
+      const em = state.signedInEmail?.trim();
+      if (em) {
+        emailEl.textContent = em;
+        emailEl.classList.remove("hidden");
+      } else {
+        emailEl.textContent = "";
+        emailEl.classList.add("hidden");
+      }
+    }
+    if (signOutBtn) signOutBtn.classList.toggle("hidden", !state.activeFingerprint);
   }
 
   function setBusinessAddDetailsOpen(shouldOpen) {
@@ -797,7 +929,8 @@
     const sumRemaining = state.loans.reduce((s, loan) => {
       const plannedTotal = Math.max(0, Number(loan.monthlyPayment) || 0);
       const paidThisYm = paymentsThisYmSum(loan, ymKey);
-      return s + Math.max(0, Math.round(plannedTotal - paidThisYm));
+      const rem = Math.max(0, Math.round(plannedTotal - paidThisYm));
+      return s + loanAmountToGbp(loan, rem);
     }, 0);
     totalEl.textContent = money(sumRemaining);
 
@@ -1342,6 +1475,7 @@
 
   function buildDebtCard(loan, index) {
     const t = normalizeTier(loan.tier);
+    const lc = loanCurrency(loan);
     const bal = Math.max(0, Number(loan.balance) || 0);
     const mp = Math.max(0, Number(loan.monthlyPayment) || 0);
     const payments = Array.isArray(loan.payments) ? loan.payments : [];
@@ -1371,13 +1505,16 @@
     rm.appendChild(irm);
     top.append(nameIn, rm);
 
-    const balLab = node("p", "debt-card-balance-label muted small");
-    balLab.textContent = paidOff ? "Balance" : "You still owe";
-    const balEl = node("p", "debt-card-balance");
-    const balStrong = node("strong");
-    balStrong.textContent = moneyFull(bal);
-    balEl.appendChild(balStrong);
-
+    const totAll = totalDebtBalance();
+    const balGbp = loanAmountToGbp(loan, bal);
+    const pctShare = totAll > 0.005 ? Math.round((balGbp / totAll) * 1000) / 10 : 0;
+    const scanLine = node("div", "debt-card-scan-line");
+    const pill = node("span", "debt-tier-pill debt-tier-pill--" + t);
+    pill.textContent = t === "people" ? "Person" : t === "overdraft" ? "Bank / OD" : "Card & loans";
+    const pctSpan = node("span", "debt-card-pct muted");
+    pctSpan.textContent =
+      paidOff || totAll <= 0.005 ? "" : `${pctShare}% of total owed`;
+    scanLine.append(pill, pctSpan);
 
     const tierLab = node("label", "field loan-tier debt-card-tier");
     const tierSpan = node("span", "field-label");
@@ -1394,18 +1531,66 @@
     });
     tierLab.append(tierSpan, sel);
 
+    const curLab = node("label", "field loan-currency debt-card-currency");
+    const curSpan = node("span", "field-label");
+    curSpan.textContent = "This debt is in";
+    const curSel = node("select");
+    curSel.setAttribute("data-k", "currency");
+    curSel.setAttribute("data-i", String(index));
+    [
+      ["GBP", "Pounds (£)"],
+      ["EUR", "Euros (€)"],
+    ].forEach(([val, lab]) => {
+      const opt = node("option");
+      opt.value = val;
+      opt.textContent = lab;
+      if (val === lc) opt.selected = true;
+      curSel.appendChild(opt);
+    });
+    curLab.append(curSpan, curSel);
+
     const fieldsDebt = node("div", "debt-card-fields debt-card-fields--debt");
-    appendLabelledNumberField(fieldsDebt, "Balance left (£)", "balance", index, loan.balance, "0.01");
     appendLabelledNumberField(fieldsDebt, "Interest % (0 if none)", "apr", index, loan.apr, "0.1");
 
     const detailsDebt = node("details", "debt-card-details");
     const sumDetails = node("summary", "debt-card-details__summary");
-    sumDetails.textContent = "Balance, rate & type";
+    sumDetails.textContent = "Currency, rate & type";
     const detailsBody = node("div", "debt-card-details__body");
-    detailsBody.append(tierLab, fieldsDebt);
+    detailsBody.append(curLab, tierLab, fieldsDebt);
     detailsDebt.append(sumDetails, detailsBody);
 
-    article.append(top, balLab, balEl);
+    article.append(top, scanLine);
+
+    if (paidOff) {
+      const balLabP = node("p", "debt-card-balance-label muted small");
+      balLabP.textContent = "Balance";
+      const balEl = node("p", "debt-card-balance");
+      const balStrong = node("strong");
+      balStrong.textContent = formatMoneyLoanCurrency(bal, lc);
+      balEl.appendChild(balStrong);
+      article.append(balLabP, balEl);
+    } else {
+      const balWrap = node("div", "debt-card-balance-block");
+      const labRow = node("span", "debt-card-balance-hero-label muted small");
+      labRow.textContent = "You still owe";
+      const balInput = node("input", "debt-card-balance-input");
+      balInput.type = "number";
+      balInput.min = "0";
+      balInput.step = "0.01";
+      balInput.setAttribute("inputmode", "decimal");
+      balInput.setAttribute("data-k", "balance");
+      balInput.setAttribute("data-i", String(index));
+      balInput.setAttribute("aria-label", "Balance left to pay");
+      const rawBal = Number(loan.balance);
+      balInput.value = Number.isFinite(rawBal) ? String(round2(rawBal)) : "0";
+      const balHint = node("p", "debt-card-balance-hint tiny muted");
+      balHint.textContent =
+        lc === "EUR"
+          ? "Figures on this card are in euros. Money tab stays in £; combined totals use your £ per €1 in Profile (e.g. from Revolut)."
+          : "Change this whenever the real balance moves — e.g. interest on your statement — you don’t need to delete payments.";
+      balWrap.append(labRow, balInput, balHint);
+      article.appendChild(balWrap);
+    }
 
     if (paidOff) {
       const po = node("p", "debt-card-paid-off muted small");
@@ -1430,11 +1615,11 @@
       const det = node("details", "debt-payment-log");
       const sum = node("summary", "debt-payment-log__summary");
       if (showPlannedRow && payments.length > 0) {
-        sum.textContent = `Planned & recorded payments (${payments.length} recorded)`;
+        sum.textContent = `This month + ${payments.length} payment${payments.length === 1 ? "" : "s"}`;
       } else if (showPlannedRow) {
-        sum.textContent = "Planned payment for this month";
+        sum.textContent = "This month’s plan";
       } else {
-        sum.textContent = `Payments you’ve recorded (${payments.length})`;
+        sum.textContent = `${payments.length} recorded payment${payments.length === 1 ? "" : "s"}`;
       }
 
       const ul = node("ul", "debt-payment-log__list");
@@ -1442,7 +1627,7 @@
       if (showPlannedRow) {
         const li = node("li", "debt-payment-row");
         const txt = node("span", "debt-payment-row__text");
-        txt.textContent = `Planned (this month) · ${money(remainingWhole)}`;
+        txt.textContent = `Planned (this month) · ${formatMoneyLoanCurrency(remainingWhole, lc, true)}`;
         const actions = node("div", "debt-payment-row__actions");
 
         const tick = node("button", "debt-payment-complete-btn btn-with-lucide");
@@ -1472,7 +1657,7 @@
         const li = node("li", "debt-payment-row");
         const notePart = p.note ? ` · ${p.note}` : "";
         const txt = node("span", "debt-payment-row__text");
-        txt.textContent = `${formatShortDate(p.at)} · ${moneyFull(p.amount)}${notePart}`;
+        txt.textContent = `${formatShortDate(p.at)} · ${formatMoneyLoanCurrency(p.amount, lc)}${notePart}`;
         li.appendChild(txt);
 
         const del = node("button", "debt-payment-delete-btn");
@@ -1921,8 +2106,12 @@
     if (title) title.textContent = "Record a payment";
     if (ctx) {
       const label = (loan.name || "").trim() || "this debt";
-      ctx.textContent = `Lowers what you owe on “${label}”. Right now the balance is ${moneyFull(bal)}.`;
+      ctx.textContent = `Lowers what you owe on “${label}”. Right now the balance is ${formatMoneyLoanCurrency(bal, loanCurrency(loan))}.`;
     }
+    const payLab = el("payDebtAmountLabel");
+    if (payLab)
+      payLab.textContent =
+        loanCurrency(loan) === "EUR" ? "Amount you paid (euros)" : "Amount you paid (pounds)";
     const hid = el("payDebtLoanIndex");
     if (hid) hid.value = String(index);
     const amtEl = el("payDebtAmount");
@@ -2225,7 +2414,7 @@
     li3.append("Left after planned debt payments: ", s3);
     list.appendChild(li3);
     foot.textContent =
-      "Recorded payments this month reduce this total. Change planned amounts on Debts (Payment this month £), or income and bills on Money.";
+      "Recorded payments this month reduce this total. Change planned amounts on the Debts tab, or income and bills on Money. Euro debts convert to pounds for this summary using your £ per €1 in Profile.";
   }
 
   function renderLoans() {
@@ -2244,6 +2433,7 @@
     const k = input.getAttribute("data-k");
     if (k === "name") state.loans[i].name = input.value;
     else if (k === "tier") state.loans[i].tier = input.value;
+    else if (k === "currency") state.loans[i].currency = input.value === "EUR" ? "EUR" : "GBP";
     else if (k === "monthlyPayment")
       state.loans[i].monthlyPayment = round2(Math.max(0, Number(input.value) || 0));
     else state.loans[i][k] = Number(input.value) || 0;
@@ -2255,9 +2445,131 @@
     const sums = { people: 0, overdraft: 0, other: 0 };
     state.loans.forEach((l) => {
       const t = normalizeTier(l.tier);
-      sums[t] += Math.max(0, Number(l.balance) || 0);
+      sums[t] += loanAmountToGbp(l, Math.max(0, Number(l.balance) || 0));
     });
     return sums;
+  }
+
+  function totalDebtBalance() {
+    return round2(
+      state.loans.reduce((s, l) => s + loanAmountToGbp(l, Math.max(0, Number(l.balance) || 0)), 0)
+    );
+  }
+
+  function renderDebtsAtAGlance() {
+    const tbody = el("debtsScanBody");
+    const empty = el("debtsScanEmpty");
+    const chartEmpty = el("debtShareChartEmpty");
+    const canvas = el("debtShareChart");
+    if (!tbody) return;
+
+    const rows = [];
+    state.loans.forEach((loan, index) => {
+      const bal = Math.max(0, Number(loan.balance) || 0);
+      if (bal <= 0.005) return;
+      rows.push({ loan, index, bal });
+    });
+    const total = rows.reduce((s, r) => s + loanAmountToGbp(r.loan, r.bal), 0);
+
+    tbody.replaceChildren();
+    if (!rows.length) {
+      if (empty) empty.classList.remove("hidden");
+      if (chartEmpty) chartEmpty.classList.remove("hidden");
+      if (debtShareChartInstance) {
+        debtShareChartInstance.destroy();
+        debtShareChartInstance = null;
+      }
+      return;
+    }
+    if (empty) empty.classList.add("hidden");
+
+    rows.forEach(({ loan, index, bal }) => {
+      const balGbp = loanAmountToGbp(loan, bal);
+      const pct = total > 0 ? Math.round((balGbp / total) * 1000) / 10 : 0;
+      const tr = node("tr");
+      tr.setAttribute("data-debt-jump", String(index));
+      const td1 = node("td");
+      td1.textContent = (loan.name && String(loan.name).trim()) || "Debt";
+      const td2 = node("td");
+      td2.textContent = formatMoneyLoanCurrency(bal, loanCurrency(loan));
+      const td3 = node("td");
+      td3.textContent = `${pct}%`;
+      tr.append(td1, td2, td3);
+      tbody.appendChild(tr);
+    });
+
+    if (!canvas || typeof Chart === "undefined") return;
+    const debtPanelActive = el("panelDebts")?.classList.contains("active");
+    if (!debtPanelActive) {
+      if (debtShareChartInstance) {
+        debtShareChartInstance.destroy();
+        debtShareChartInstance = null;
+      }
+      return;
+    }
+    if (chartEmpty) chartEmpty.classList.add("hidden");
+    if (debtShareChartInstance) {
+      debtShareChartInstance.destroy();
+      debtShareChartInstance = null;
+    }
+    const colors = ["#ff3d7a", "#5e9eff", "#9ec5ff", "#c084fc", "#f472b6", "#38bdf8", "#a78bfa", "#fb7185"];
+    const labels = rows.map((r) => (r.loan.name && String(r.loan.name).trim()) || "Debt");
+    const data = rows.map((r) => loanAmountToGbp(r.loan, r.bal));
+    debtShareChartInstance = new Chart(canvas.getContext("2d"), {
+      type: "doughnut",
+      data: {
+        labels,
+        datasets: [
+          {
+            data,
+            backgroundColor: data.map((_, i) => colors[i % colors.length]),
+            borderWidth: 2,
+            borderColor: "rgba(8, 10, 22, 0.9)",
+            hoverOffset: 6,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: "62%",
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: {
+              color: "rgba(235, 228, 245, 0.82)",
+              boxWidth: 10,
+              font: { size: 10 },
+            },
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const r = rows[ctx.dataIndex];
+                const v = Number(ctx.raw) || 0;
+                const pct = total > 0 ? ((v / total) * 100).toFixed(1) : "0";
+                if (!r) return `${ctx.label}: ${moneyFull(v)} (${pct}%)`;
+                const native = formatMoneyLoanCurrency(r.bal, loanCurrency(r.loan));
+                return `${ctx.label}: ${native} (${pct}% of mix, ≈ ${moneyFull(v)})`;
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  function bindDebtsScanOnce() {
+    const tbody = el("debtsScanBody");
+    if (!tbody || tbody.dataset.debtScanBound) return;
+    tbody.dataset.debtScanBound = "1";
+    tbody.addEventListener("click", (e) => {
+      const tr = e.target.closest("tr[data-debt-jump]");
+      if (!tr) return;
+      const i = Number(tr.getAttribute("data-debt-jump"));
+      const card = document.querySelector(`[data-loan-index="${i}"]`);
+      card?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   function refresh(opts = {}) {
@@ -2279,7 +2591,7 @@
 
     const ymKey = ymKeyFromYmd(todayYmd());
     const sumPlannedRemaining = round2(
-      state.loans.reduce((s, l) => s + plannedRemainingForLoan(l, ymKey), 0)
+      state.loans.reduce((s, l) => s + loanAmountToGbp(l, plannedRemainingForLoan(l, ymKey)), 0)
     );
     const spareAfterPlan = leftForDebt - sumPlannedRemaining;
     const insolvent = leftForDebt + 0.001 < sumPlannedRemaining && state.loans.length > 0;
@@ -2297,10 +2609,12 @@
 
     updatePayoffAtAGlance(sumPlannedRemaining, leftForDebt, spareAfterPlan);
 
-    const total = state.loans.reduce((s, l) => s + Math.max(0, Number(l.balance) || 0), 0);
+    const total = totalDebtBalance();
     el("totalDebt").textContent = moneyFull(total);
     const sums = sumDebtByTier();
     const tierLine = el("debtByTier");
+    const mixHint = el("debtsTotalConversionHint");
+    if (mixHint) mixHint.classList.toggle("hidden", !hasAnyEuroDebt());
     if (total > 0) {
       tierLine.textContent = `People you know: ${moneyFull(sums.people)} · Overdraft / bank: ${moneyFull(sums.overdraft)} · Everything else: ${moneyFull(sums.other)}`;
       tierLine.classList.remove("hidden");
@@ -2355,7 +2669,10 @@
       }
     } else focusSec.classList.add("hidden");
 
-    if (!opts.skipLoans) renderLoans();
+    if (!opts.skipLoans) {
+      renderLoans();
+      renderDebtsAtAGlance();
+    }
     if (!opts.skipPlannedDebts) renderPlannedDebtsCard();
     if (!opts.skipMoneyLines) {
       renderIncomeItems();
@@ -2443,29 +2760,42 @@
 
   function updateNavAvatar() {
     const url = getPhotoDataUrl();
-    const nav = document.querySelector("#navAvatar");
+    const nav = el("navAvatar");
     const prev = el("photoPreview");
+    const initials = (state.profile.displayName || "?")
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((w) => w[0])
+      .join("")
+      .toUpperCase() || "?";
+
     if (url) {
-      nav.style.backgroundImage = `url("${url}")`;
-      prev.style.backgroundImage = `url("${url}")`;
-      prev.textContent = "";
+      if (nav) {
+        nav.style.backgroundImage = `url("${url}")`;
+        nav.textContent = "";
+      }
+      if (prev) {
+        prev.style.backgroundImage = `url("${url}")`;
+        prev.textContent = "";
+      }
     } else {
-      nav.style.backgroundImage = "";
-      prev.style.backgroundImage = "";
-      const initials = (state.profile.displayName || "?")
-        .trim()
-        .split(/\s+/)
-        .slice(0, 2)
-        .map((w) => w[0])
-        .join("")
-        .toUpperCase() || "?";
-      prev.textContent = initials;
+      if (nav) {
+        nav.style.backgroundImage = "";
+        nav.textContent = initials;
+      }
+      if (prev) {
+        prev.style.backgroundImage = "";
+        prev.textContent = initials;
+      }
     }
+    updateNavDrawerChrome();
   }
 
   function openModal() {
     el("profileModal").classList.remove("hidden");
     el("displayName").value = state.profile.displayName;
+    syncPreferencesToDom();
     updateAccountPanel();
     updateNavAvatar();
     el("authError").classList.add("hidden");
@@ -2484,6 +2814,7 @@
     el("accountStatus").textContent = loggedIn ? state.signedInEmail || "Signed in" : "Guest on this device";
     el("loggedInActions").classList.toggle("hidden", !loggedIn);
     el("guestAuth").classList.toggle("hidden", loggedIn);
+    updateNavDrawerChrome();
   }
 
   function setAuthTab(tab) {
@@ -2499,20 +2830,118 @@
 
   const APP_TAB_KEY = "payoff.mainTab";
 
+  function closeNavDrawer() {
+    const overlay = el("navDrawerOverlay");
+    const drawer = el("navDrawer");
+    const btn = el("btnNavMenu");
+    overlay?.classList.add("hidden");
+    drawer?.classList.add("hidden");
+    overlay?.setAttribute("aria-hidden", "true");
+    drawer?.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("nav-drawer-open");
+    if (btn) btn.setAttribute("aria-expanded", "false");
+  }
+
+  function openNavDrawer() {
+    const overlay = el("navDrawerOverlay");
+    const drawer = el("navDrawer");
+    const btn = el("btnNavMenu");
+    overlay?.classList.remove("hidden");
+    drawer?.classList.remove("hidden");
+    overlay?.setAttribute("aria-hidden", "false");
+    drawer?.setAttribute("aria-hidden", "false");
+    document.body.classList.add("nav-drawer-open");
+    if (btn) btn.setAttribute("aria-expanded", "true");
+    updateNavDrawerChrome();
+    paintIcons();
+  }
+
+  function bindNavDrawerOnce() {
+    if (document.body.dataset.navDrawerBound) return;
+    document.body.dataset.navDrawerBound = "1";
+    el("btnNavMenu")?.addEventListener("click", () => {
+      const drawer = el("navDrawer");
+      if (drawer?.classList.contains("hidden")) openNavDrawer();
+      else closeNavDrawer();
+    });
+    el("btnNavDrawerClose")?.addEventListener("click", closeNavDrawer);
+    el("navDrawerOverlay")?.addEventListener("click", closeNavDrawer);
+    el("navDrawer")?.querySelectorAll(".nav-drawer__item").forEach((item) => {
+      item.addEventListener("click", () => {
+        const tab = item.getAttribute("data-app-tab");
+        if (tab) setAppTab(tab);
+        closeNavDrawer();
+      });
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      const drawer = el("navDrawer");
+      if (drawer && !drawer.classList.contains("hidden")) closeNavDrawer();
+    });
+
+    el("navDrawerBtnSave")?.addEventListener("click", () => {
+      savePlanner();
+      flashNavDrawerSaveToast();
+      paintIcons();
+    });
+    el("navDrawerBtnExport")?.addEventListener("click", () => runExportBackup());
+    el("navDrawerBtnImport")?.addEventListener("click", () => el("importBackupInput")?.click());
+    el("navDrawerBtnProfile")?.addEventListener("click", () => {
+      openModal();
+      closeNavDrawer();
+    });
+    el("navDrawerBtnSignOut")?.addEventListener("click", () => {
+      closeNavDrawer();
+      signOut();
+      loadPlanner();
+      syncFormFromState();
+      businessEditBackup = null;
+      businessOpenDetailId = null;
+      resetBusinessDraft();
+      updateAccountPanel();
+      refresh();
+    });
+  }
+
+  function syncPreferencesToDom() {
+    const sel = el("prefDisplayCurrency");
+    if (sel) sel.value = displayCurrency();
+    const rate = el("prefGbpPerEur");
+    if (rate) rate.value = String(gbpPerEurRate());
+    const wrap = el("prefGbpPerEurWrap");
+    if (wrap) wrap.classList.remove("hidden");
+  }
+
+  function applyPreferencesFromDom() {
+    const sel = el("prefDisplayCurrency");
+    const rateEl = el("prefGbpPerEur");
+    if (sel) state.preferences.currency = sel.value === "EUR" ? "EUR" : "GBP";
+    if (rateEl) {
+      const r = Number(rateEl.value);
+      if (Number.isFinite(r) && r > 0) state.preferences.gbpPerEur = round2(r);
+    }
+    syncPreferencesToDom();
+    savePlanner();
+    refresh();
+  }
+
   function setAppTab(id) {
     const valid = ["money", "debts", "payoff", "business", "investor"].includes(id) ? id : "money";
-    document.querySelectorAll(".app-tab").forEach((btn) => {
+    document.querySelectorAll(".nav-drawer__item").forEach((btn) => {
       const on = btn.getAttribute("data-app-tab") === valid;
-      btn.classList.toggle("active", on);
-      btn.setAttribute("aria-selected", on);
+      btn.classList.toggle("nav-drawer__item--active", on);
     });
     document.querySelectorAll(".tab-panel").forEach((panel) => {
       const on = panel.getAttribute("data-panel") === valid;
       panel.classList.toggle("active", on);
     });
+    closeNavDrawer();
     try {
       sessionStorage.setItem(APP_TAB_KEY, valid);
     } catch (_) {}
+    if (valid === "debts") {
+      requestAnimationFrame(() => renderDebtsAtAGlance());
+    }
   }
 
   async function resizeImageFile(file, maxSide = 400) {
@@ -2706,6 +3135,7 @@
   function syncFormFromState() {
     applyOptionalLinesToBudgetFields();
     syncInvestorDomFromState();
+    syncPreferencesToDom();
   }
 
   function init() {
@@ -2725,6 +3155,11 @@
     bindMonthTableSortingOnce();
     bindBusinessDraftOnce();
     resetBusinessDraft();
+    bindNavDrawerOnce();
+    bindDebtsScanOnce();
+
+    el("prefDisplayCurrency")?.addEventListener("change", applyPreferencesFromDom);
+    el("prefGbpPerEur")?.addEventListener("change", applyPreferencesFromDom);
 
     el("btnAddIncomeItem").addEventListener("click", () => {
       openAddIncomeModal();
@@ -2811,6 +3246,7 @@
       const apr = Math.max(0, Number(el("debtDraftApr").value) || 0);
       const monthlyPayment = Math.max(0, Number(el("debtDraftPayment").value) || 0);
       const tier = normalizeTier(el("debtDraftTier").value);
+      const draftCur = el("debtDraftCurrency")?.value === "EUR" ? "EUR" : "GBP";
       state.loans.push({
         id: uid(),
         name,
@@ -2818,6 +3254,7 @@
         apr,
         monthlyPayment,
         tier,
+        currency: draftCur,
         payments: [],
       });
       el("debtDraftName").value = "";
@@ -2825,6 +3262,8 @@
       el("debtDraftApr").value = "";
       el("debtDraftPayment").value = "";
       el("debtDraftTier").value = "other";
+      const dc = el("debtDraftCurrency");
+      if (dc) dc.value = "GBP";
       savePlanner();
       setDebtAddDetailsOpen(false);
       refresh();
@@ -2886,36 +3325,7 @@
     bindInvestor();
     bindInvestorLadderChecks();
 
-    function buildBackupObject() {
-      return {
-        improverUxBackup: 1,
-        exportedAt: new Date().toISOString(),
-        planner: {
-          income: state.budget.income,
-          mustPayBills: state.budget.mustPayBills,
-          incomeItems: state.incomeItems,
-          billItems: state.billItems,
-          monthLog: state.monthLog,
-          businessLog: state.businessLog,
-          loans: state.loans,
-          investor: state.investor,
-        },
-        profile: { displayName: state.profile.displayName || "" },
-        photoDataUrl: getPhotoDataUrl() || null,
-      };
-    }
-
-    el("btnExportBackup")?.addEventListener("click", () => {
-      const payload = buildBackupObject();
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-      const a = document.createElement("a");
-      const stamp = new Date().toISOString().slice(0, 10);
-      a.href = URL.createObjectURL(blob);
-      a.download = `calmplan-backup-${stamp}.json`;
-      a.click();
-      URL.revokeObjectURL(a.href);
-      paintIcons();
-    });
+    el("btnExportBackup")?.addEventListener("click", () => runExportBackup());
 
     el("importBackupInput")?.addEventListener("change", async (e) => {
       const file = e.target.files?.[0];
@@ -2954,7 +3364,6 @@
       }
     });
 
-    el("btnProfile").addEventListener("click", openModal);
     el("btnCloseProfile").addEventListener("click", closeModal);
     el("profileModal").addEventListener("click", (e) => {
       if (e.target === el("profileModal")) closeModal();
@@ -2984,10 +3393,6 @@
 
     el("guestAuth").querySelectorAll(".auth-tab").forEach((t) => {
       t.addEventListener("click", () => setAuthTab(t.getAttribute("data-tab")));
-    });
-
-    document.querySelectorAll(".app-tab").forEach((btn) => {
-      btn.addEventListener("click", () => setAppTab(btn.getAttribute("data-app-tab")));
     });
 
     try {
