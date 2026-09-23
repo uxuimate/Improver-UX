@@ -2926,7 +2926,7 @@
   }
 
   function setAppTab(id) {
-    const valid = ["money", "debts", "payoff", "business", "investor"].includes(id) ? id : "money";
+    const valid = ["money", "debts", "payoff", "business"].includes(id) ? id : "money";
     document.querySelectorAll(".nav-drawer__item").forEach((btn) => {
       const on = btn.getAttribute("data-app-tab") === valid;
       btn.classList.toggle("nav-drawer__item--active", on);
