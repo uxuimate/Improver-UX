@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en-GB">
+<html lang="en-GB" data-theme="dark">
 
   <head>
     <meta charset="UTF-8" />
@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=15" />
+    <link rel="stylesheet" href="styles.css?v=17" />
     <link rel="manifest" href="manifest.json" />
     <link rel="icon" href="veiro-logo-compact.png" type="image/png" />
     <link rel="apple-touch-icon" href="veiro-logo-compact.png" />
@@ -178,18 +178,24 @@
           </section>
 
           <!-- Plan -->
-          <section class="route-panel route-panel--ledger" id="panelPlan" data-route="plan" hidden>
-            <div class="segmented" role="tablist" aria-label="Plan sections">
-              <button type="button" class="segmented__btn active" role="tab" aria-selected="true" data-plan-tab="debts" id="planTabDebts">Debts</button>
-              <button type="button" class="segmented__btn" role="tab" aria-selected="false" data-plan-tab="payoff" id="planTabPayoff">Payoff</button>
-            </div>
-
+          <section class="route-panel route-panel--ledger route-panel--plan" id="panelPlan" data-route="plan" hidden>
             <div id="planDebtsPane">
               <div class="ledger" id="debtList" aria-live="polite"></div>
               <div class="empty-state empty-state--ledger hidden" id="debtsEmpty">
                 <h2 class="empty-state__title">No debts yet</h2>
                 <p class="empty-state__text">Add what you owe — name, balance, planned.</p>
               </div>
+
+              <section class="payoff-inline" id="planPayoffSection" aria-label="Payoff forecast">
+                <p class="panel-lead payoff-inline__lead">Forecast updates as you change balances and planned payments.</p>
+                <div class="strategy-grid" id="strategyCards"></div>
+                <section class="panel-block chart-block">
+                  <h2 class="panel-block__title">Debt over time</h2>
+                  <div class="chart-wrap">
+                    <canvas id="debtChart" aria-label="Debt balance over months"></canvas>
+                  </div>
+                </section>
+              </section>
 
               <div class="ledger-dock" id="debtDock">
                 <div class="ledger-dock__actions ledger-dock__actions--single">
@@ -206,17 +212,6 @@
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div id="planPayoffPane" class="hidden">
-              <p class="panel-lead">Compare strategies using this month’s income and non-debt spending. Recommended = lowest total interest.</p>
-              <div class="strategy-grid" id="strategyCards"></div>
-              <section class="panel-block chart-block">
-                <h2 class="panel-block__title">Debt over time</h2>
-                <div class="chart-wrap">
-                  <canvas id="debtChart" aria-label="Debt balance over months"></canvas>
-                </div>
-              </section>
             </div>
           </section>
 
@@ -470,6 +465,13 @@
             <input type="text" id="displayName" maxlength="80" autocomplete="name" />
           </label>
           <div class="currency-prefs-block">
+            <p class="section-label tight">Appearance</p>
+            <div class="segmented segmented--sm" role="tablist" aria-label="App theme">
+              <button type="button" class="segmented__btn active" data-theme-opt="dark" id="themeOptDark" role="tab" aria-selected="true">Dark</button>
+              <button type="button" class="segmented__btn" data-theme-opt="light" id="themeOptLight" role="tab" aria-selected="false">Light</button>
+            </div>
+          </div>
+          <div class="currency-prefs-block">
             <p class="section-label tight">Currency</p>
             <div class="row two">
               <label class="field">
@@ -546,9 +548,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script src="repository.js"></script>
-    <script src="receipts.js"></script>
-    <script src="app.js?v=13"></script>
+    <script src="repository.js?v=17"></script>
+    <script src="receipts.js?v=17"></script>
+    <script src="app.js?v=17"></script>
   </body>
 
 </html>

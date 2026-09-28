@@ -53,22 +53,48 @@
 
   function clampYmd(raw, fallback) {
     const s = typeof raw === "string" ? raw.trim().slice(0, 10) : "";
-    return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : fallback || todayYmd();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    return fallback !== undefined ? fallback : todayYmd();
   }
 
   /** Parse labels like "Mar 2026", "2026-03", "March 2026" → yyyy-mm-01 when possible. */
   function dateFromMonthLabel(label, fallbackYmd) {
     const s = String(label || "").trim();
+    if (!s) return fallbackYmd !== undefined ? fallbackYmd : todayYmd();
     if (/^\d{4}-\d{2}$/.test(s)) return s + "-01";
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const isoish = s.match(/(\d{4})-(\d{2})/);
+    if (isoish) return `${isoish[1]}-${isoish[2]}-01`;
+    const months =
+      "january|february|march|april|may|june|july|august|september|october|november|december|" +
+      "jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec";
+    const named = s.match(new RegExp(`\\b(${months})\\b[\\s,.-]*(\\d{4})`, "i"));
+    if (named) {
+      const map = {
+        january: 1, jan: 1, february: 2, feb: 2, march: 3, mar: 3, april: 4, apr: 4,
+        may: 5, june: 6, jun: 6, july: 7, jul: 7, august: 8, aug: 8,
+        september: 9, sept: 9, sep: 9, october: 10, oct: 10, november: 11, nov: 11, december: 12, dec: 12,
+      };
+      const mi = map[named[1].toLowerCase()];
+      if (mi) return `${named[2]}-${String(mi).padStart(2, "0")}-01`;
+    }
     const parsed = Date.parse(s);
     if (!Number.isNaN(parsed)) {
       const d = new Date(parsed);
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      return `${y}-${m}-01`;
+      if (!Number.isNaN(d.getTime())) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        if (y >= 2000 && y <= 2100) return `${y}-${m}-01`;
+      }
     }
-    return fallbackYmd || todayYmd();
+    return fallbackYmd !== undefined ? fallbackYmd : todayYmd();
+  }
+
+  function dateFromBusinessEntry(entry, fallbackYmd) {
+    const id = String((entry && entry.id) || "");
+    const fromId = id.match(/(\d{4}-\d{2})/);
+    if (fromId) return `${fromId[1]}-01`;
+    return dateFromMonthLabel(entry && entry.label, fallbackYmd);
   }
 
   function tierToKind(tier) {
@@ -224,7 +250,7 @@
         normalizeTransaction(
           {
             id: item.id || idFn(),
-            date: clampYmd(item.date, fallbackDate),
+            date: clampYmd(item.date, null) || `${fallbackDate.slice(0, 7)}-01`,
             type: "income",
             amountMinor: toMinor(amount),
             currency: "GBP",
@@ -248,7 +274,7 @@
         normalizeTransaction(
           {
             id: item.id || idFn(),
-            date: clampYmd(item.date, fallbackDate),
+            date: clampYmd(item.date, null) || `${fallbackDate.slice(0, 7)}-01`,
             type: "expense",
             amountMinor: toMinor(amount),
             currency: "GBP",
@@ -266,7 +292,7 @@
     const businessLog = Array.isArray(planner.businessLog) ? planner.businessLog : [];
     businessLog.forEach((entry) => {
       if (!entry) return;
-      const date = dateFromMonthLabel(entry.label, fallbackDate);
+      const date = dateFromBusinessEntry(entry, fallbackDate);
       const incomeItemsB = Array.isArray(entry.incomeItems) ? entry.incomeItems : [];
       const expenseItemsB = Array.isArray(entry.expenseItems) ? entry.expenseItems : [];
       const hasLines = incomeItemsB.length > 0 || expenseItemsB.length > 0;
@@ -388,6 +414,55 @@
       });
     });
 
+    // Personal monthly archives (monthLog) — keep history across months
+    const monthLog = Array.isArray(planner.monthLog) ? planner.monthLog : [];
+    monthLog.forEach((entry) => {
+      if (!entry) return;
+      const date = dateFromMonthLabel(entry.label, null);
+      if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+      const income = Math.max(0, Number(entry.income) || 0);
+      const bills = Math.max(0, Number(entry.mustPayBills) || 0);
+      const baseId = entry.id || idFn();
+      if (income > 0) {
+        txs.push(
+          normalizeTransaction(
+            {
+              id: `monthlog:${baseId}:income`,
+              date,
+              type: "income",
+              amountMinor: toMinor(income),
+              currency: "GBP",
+              category: "Month archive",
+              scope: "personal",
+              note: entry.label || "Month archive",
+              createdAt: now,
+              updatedAt: now,
+            },
+            idFn
+          )
+        );
+      }
+      if (bills > 0) {
+        txs.push(
+          normalizeTransaction(
+            {
+              id: `monthlog:${baseId}:expense`,
+              date,
+              type: "expense",
+              amountMinor: toMinor(bills),
+              currency: "GBP",
+              category: "Month archive",
+              scope: "personal",
+              note: entry.label || "Month archive",
+              createdAt: now,
+              updatedAt: now,
+            },
+            idFn
+          )
+        );
+      }
+    });
+
     return txs;
   }
 
@@ -413,6 +488,32 @@
     } else {
       transactions = buildTransactionsFromLegacy(p, uidFn);
     }
+
+    // Always merge monthLog archives (idempotent by id) so history isn't lost after v2 migrate
+    const archiveTxs = buildTransactionsFromLegacy(
+      { monthLog: p.monthLog, incomeItems: [], billItems: [], businessLog: [], loans: [] },
+      uidFn
+    );
+    if (archiveTxs.length) {
+      const have = new Set(transactions.map((t) => t.id));
+      archiveTxs.forEach((t) => {
+        if (!have.has(t.id)) transactions.push(t);
+      });
+    }
+
+    // Re-date imported monthly totals / notes that encode a month label
+    transactions = transactions.map((t) => {
+      const fromNote = dateFromMonthLabel(t.note, null);
+      if (
+        fromNote &&
+        /^\d{4}-\d{2}-\d{2}$/.test(fromNote) &&
+        (t.category === "Imported monthly total" || t.category === "Month archive") &&
+        t.date.slice(0, 7) !== fromNote.slice(0, 7)
+      ) {
+        return { ...t, date: fromNote };
+      }
+      return t;
+    });
 
     if (Array.isArray(p.debts) && p.debts.length > 0) {
       debts = p.debts.map((d) => normalizeDebt(d, uidFn));

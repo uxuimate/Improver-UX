@@ -73,6 +73,85 @@
   --space-6: 24px;
 }
 
+[data-theme="light"] {
+  color-scheme: light;
+  --bg-deep: #f2f2f7;
+  --bg-elevated: #ffffff;
+  --bg-grouped: #ffffff;
+  --bg-fill: #e5e5ea;
+  --bg-fill-secondary: #ffffff;
+  --bg-glow-a: #e8a0b8;
+  --bg-glow-b: #e2c78a;
+  --mint: #d9487a;
+  --mint-rgb: 217, 72, 122;
+  --mint-bright: #e86b94;
+  --gold: #b8923f;
+  --gold-rgb: 184, 146, 63;
+  --gold-bright: #c9a84e;
+  --accent-soft: #b8923f;
+  --accent-soft-rgb: 184, 146, 63;
+  --text: rgba(0, 0, 0, 0.92);
+  --muted: rgba(60, 60, 67, 0.55);
+  --muted-strong: rgba(60, 60, 67, 0.72);
+  --separator: rgba(60, 60, 67, 0.22);
+  --glass-bg: rgba(255, 255, 255, 0.78);
+  --glass-bg-strong: rgba(255, 255, 255, 0.92);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-fill: rgba(255, 255, 255, 0.88);
+  --danger: #d70015;
+  --ok: #b8923f;
+  --ok-rgb: 184, 146, 63;
+  --expense: #d9487a;
+  --expense-rgb: 217, 72, 122;
+  --shadow-glass: 0 8px 28px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="light"] .backdrop {
+  background: var(--bg-deep);
+}
+
+[data-theme="light"] .backdrop::before,
+[data-theme="light"] .backdrop::after {
+  opacity: 0.2;
+}
+
+[data-theme="light"] .app-topbar,
+[data-theme="light"] .bottom-nav,
+[data-theme="light"] .side-nav {
+  background: rgba(242, 242, 247, 0.86);
+}
+
+[data-theme="light"] .ledger,
+[data-theme="light"] .panel-block,
+[data-theme="light"] .stat-tile,
+[data-theme="light"] .ledger-dock__totals,
+[data-theme="light"] .split-books__card {
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .btn.secondary {
+  color: var(--mint);
+}
+
+[data-theme="light"] .ledger-add--income {
+  background: rgba(var(--gold-rgb), 0.14);
+  color: var(--gold);
+}
+
+[data-theme="light"] .ledger-add--expense {
+  background: rgba(var(--expense-rgb), 0.12);
+  color: var(--expense);
+}
+
+[data-theme="light"] .sheet,
+[data-theme="light"] .modal,
+[data-theme="light"] .cday__panel,
+[data-theme="light"] .cmonth__panel,
+[data-theme="light"] .cselect__menu {
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-glass);
+}
+
 *,
 *::before,
 *::after {
@@ -82,6 +161,10 @@
 html {
   -webkit-text-size-adjust: 100%;
   color-scheme: dark;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
 }
 
 body {
@@ -1148,10 +1231,10 @@ select option {
 .scope-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 2px;
-  margin-bottom: 12px;
-  padding: 2px;
-  border-radius: 9px;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 4px;
+  border-radius: 10px;
   background: var(--bg-fill);
   border: none;
   box-shadow: none;
@@ -1162,18 +1245,18 @@ select option {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 32px;
-  padding: 0 10px;
+  min-height: 36px;
+  padding: 0 12px;
   border: none;
-  border-radius: 7px;
+  border-radius: 8px;
   background: transparent;
-  color: var(--text);
+  color: var(--muted-strong);
   font: inherit;
   font-size: 0.8125rem;
   font-weight: 500;
   letter-spacing: -0.01em;
   cursor: pointer;
-  transition: background 0.12s ease, box-shadow 0.12s ease;
+  transition: background 0.12s ease, box-shadow 0.12s ease, color 0.12s ease;
 }
 
 .scope-tabs__btn i {
@@ -1404,20 +1487,21 @@ select option {
 }
 
 .scope-tabs--simple {
-  margin-bottom: 8px;
+  margin-bottom: 14px;
 }
 
 .ledger {
   margin: 0;
   border-radius: var(--radius);
   background: var(--bg-grouped);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .ledger-row {
   border-bottom: 0.5px solid var(--separator);
   margin-left: 16px;
   padding-right: 4px;
+  overflow: visible;
 }
 
 .ledger-row:last-child {
@@ -1459,6 +1543,9 @@ select option {
   margin-bottom: 0;
   margin-left: 0;
   padding: 0 16px;
+  overflow: visible;
+  position: relative;
+  z-index: 6;
 }
 
 .ledger-row.is-editing .ledger-row__head {
@@ -1559,7 +1646,7 @@ select option {
   margin: 0 0 4px;
   border-radius: var(--radius);
   background: var(--bg-fill);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .ledger-edit__row {
@@ -1671,8 +1758,8 @@ select option {
 .ledger-dock__actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .ledger-add {
@@ -2293,7 +2380,25 @@ select option {
 .strategy-grid {
   display: grid;
   gap: 10px;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
+}
+
+.payoff-inline {
+  margin-top: 20px;
+  padding-bottom: 8px;
+}
+
+.payoff-inline__lead {
+  margin-bottom: 12px;
+  font-size: 0.9375rem;
+}
+
+.route-panel--plan {
+  padding-bottom: calc(200px + env(safe-area-inset-bottom));
+}
+
+.route-panel--plan .payoff-inline .panel-block {
+  margin-bottom: 0;
 }
 
 .strategy-card {
@@ -2569,14 +2674,18 @@ select option {
 .backup-actions {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  margin: 12px 0 16px;
 }
 
 .auth-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4px;
-  margin-bottom: 8px;
+  margin: 16px 0 14px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--bg-fill);
 }
 
 .auth-tab {

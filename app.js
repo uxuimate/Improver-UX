@@ -19,7 +19,7 @@
   const PAGE_META = {
     home: { title: "Home", sub: "This month at a glance" },
     activity: { title: "Activity", sub: "Your ledger" },
-    plan: { title: "Plan", sub: "Debts and payoff" },
+    plan: { title: "Plan", sub: "Debts & payoff" },
     reports: { title: "Reports", sub: "Summaries and export" },
   };
 
@@ -44,7 +44,7 @@
     debts: [],
     schemaVersion: Data.SCHEMA_VERSION,
     investor: { monthlyStake: 0, bankroll: 0, target: 0, ladderLegs: 7, ladderOdds: 3, completedLegs: [] },
-    preferences: { currency: "GBP", gbpPerEur: 0.86 },
+    preferences: { currency: "GBP", gbpPerEur: 0.86, theme: "dark" },
   };
 
   let route = "home";
@@ -52,7 +52,6 @@
   let reportPeriod = "month";
   let reportAnchor = ymNow();
   let reportScope = "personal";
-  let planTab = "debts";
   let selectedStrategy = "avalanche";
   let chartInstance = null;
   let authTab = "signin";
@@ -144,9 +143,43 @@
   function closeAllCDays() {
     document.querySelectorAll(".cday").forEach((node) => {
       node.classList.remove("is-open");
-      node.querySelector(".cday__panel")?.classList.add("hidden");
+      const panel = node.querySelector(".cday__panel");
+      if (panel) {
+        panel.classList.add("hidden");
+        panel.style.position = "";
+        panel.style.top = "";
+        panel.style.left = "";
+        panel.style.right = "";
+        panel.style.width = "";
+        panel.style.zIndex = "";
+      }
       node.querySelector(".cday__btn")?.setAttribute("aria-expanded", "false");
     });
+  }
+
+  function placeCDayPanel(root) {
+    const btn = root.querySelector(".cday__btn");
+    const panel = root.querySelector(".cday__panel");
+    if (!btn || !panel) return;
+    const rect = btn.getBoundingClientRect();
+    const width = Math.min(292, window.innerWidth - 24);
+    let left = rect.left;
+    if (left + width > window.innerWidth - 12) left = Math.max(12, window.innerWidth - width - 12);
+    panel.classList.remove("hidden");
+    panel.style.visibility = "hidden";
+    panel.style.position = "fixed";
+    panel.style.zIndex = "80";
+    panel.style.width = width + "px";
+    panel.style.left = left + "px";
+    panel.style.right = "auto";
+    panel.style.top = "0px";
+    const ph = panel.offsetHeight || 320;
+    let top = rect.bottom + 6;
+    if (top + ph > window.innerHeight - 12) {
+      top = Math.max(12, rect.top - ph - 6);
+    }
+    panel.style.top = top + "px";
+    panel.style.visibility = "";
   }
 
   function closeAllOverlays() {
@@ -369,8 +402,8 @@
         root.dataset.viewYm = v.slice(0, 7);
         paintCDayGrid(root);
         root.classList.add("is-open");
-        panel.classList.remove("hidden");
         btn.setAttribute("aria-expanded", "true");
+        placeCDayPanel(root);
         paintIcons();
       }
     });
@@ -382,6 +415,7 @@
         const cur = root.dataset.viewYm || todayYmd().slice(0, 7);
         root.dataset.viewYm = shiftYm(cur, delta);
         paintCDayGrid(root);
+        placeCDayPanel(root);
         paintIcons();
       });
     });
@@ -498,7 +532,20 @@
     const currency = d.currency === "EUR" ? "EUR" : "GBP";
     let gbpPerEur = Number(d.gbpPerEur);
     if (!Number.isFinite(gbpPerEur) || gbpPerEur <= 0) gbpPerEur = 0.86;
-    return { currency, gbpPerEur: round2(gbpPerEur) };
+    const theme = d.theme === "light" ? "light" : "dark";
+    return { currency, gbpPerEur: round2(gbpPerEur), theme };
+  }
+
+  function applyTheme(theme) {
+    const next = theme === "light" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", next === "light" ? "#f2f2f7" : "#000000");
+    document.querySelectorAll("[data-theme-opt]").forEach((b) => {
+      const on = b.getAttribute("data-theme-opt") === next;
+      b.classList.toggle("active", on);
+      b.setAttribute("aria-selected", on ? "true" : "false");
+    });
   }
 
   function displayCurrency() {
@@ -702,9 +749,22 @@
 
   /** Rebuild legacy backup fields from the canonical ledger. */
   function syncLegacyFromLedger() {
-    const personalInc = state.transactions.filter((t) => t.type === "income" && t.scope === "personal" && !t.debtId);
+    const personalInc = state.transactions.filter(
+      (t) =>
+        t.type === "income" &&
+        t.scope === "personal" &&
+        !t.debtId &&
+        t.category !== "Month archive" &&
+        t.category !== "Imported monthly total"
+    );
     const personalExp = state.transactions.filter(
-      (t) => t.type === "expense" && t.scope === "personal" && t.category !== "Debt payment" && !t.debtId
+      (t) =>
+        t.type === "expense" &&
+        t.scope === "personal" &&
+        t.category !== "Debt payment" &&
+        t.category !== "Month archive" &&
+        t.category !== "Imported monthly total" &&
+        !t.debtId
     );
     state.incomeItems = personalInc.map((t) => ({
       id: t.id,
@@ -783,15 +843,35 @@
         incomeItems: state.incomeItems,
         billItems: state.billItems,
         businessLog: state.businessLog,
+        monthLog: state.monthLog,
         loans: state.loans,
       },
       uid
     );
-    state.transactions = migrated.transactions;
+    state.transactions = repairBusinessSpread(migrated.transactions, state.businessLog);
     state.debts = migrated.debts;
     state.schemaVersion = Data.SCHEMA_VERSION;
+    applyTheme(state.preferences.theme);
     syncLegacyFromLedger();
+    try {
+      localStorage.setItem(STORAGE.planner(plannerKeyFromSession()), JSON.stringify(plannerBlob()));
+    } catch (_) {}
     return true;
+  }
+
+  /** If businessLog has several months but txs collapsed to one, rebuild business txs from the log. */
+  function repairBusinessSpread(transactions, businessLog) {
+    if (!Array.isArray(businessLog) || businessLog.length < 2) return transactions;
+    const legacyBiz = Data.buildTransactionsFromLegacy(
+      { businessLog, incomeItems: [], billItems: [], monthLog: [], loans: [] },
+      uid
+    );
+    const logMonths = new Set(legacyBiz.map((t) => t.date.slice(0, 7)));
+    if (logMonths.size <= 1) return transactions;
+    const bizTxs = transactions.filter((t) => t.scope === "business");
+    const txMonths = new Set(bizTxs.map((t) => t.date.slice(0, 7)));
+    if (txMonths.size >= logMonths.size) return transactions;
+    return [...transactions.filter((t) => t.scope !== "business"), ...legacyBiz];
   }
 
   function seedGuest() {
@@ -1567,16 +1647,6 @@
   }
 
   function renderPlan() {
-    const debtsPane = el("planDebtsPane");
-    const payoffPane = el("planPayoffPane");
-    if (debtsPane) debtsPane.classList.toggle("hidden", planTab !== "debts");
-    if (payoffPane) payoffPane.classList.toggle("hidden", planTab !== "payoff");
-    document.querySelectorAll("[data-plan-tab]").forEach((b) => {
-      const on = b.getAttribute("data-plan-tab") === planTab;
-      b.classList.toggle("active", on);
-      b.setAttribute("aria-selected", on ? "true" : "false");
-    });
-
     const cash = cashflowForPayoff();
     const owed = totalOwedGbpMinor();
     const planned = plannedThisMonthGbpMinor();
@@ -1594,17 +1664,20 @@
 
     const list = el("debtList");
     const empty = el("debtsEmpty");
+    const payoffSec = el("planPayoffSection");
     if (!list) return;
     list.replaceChildren();
     const n = state.debts.length;
     if (!n) {
       empty?.classList.remove("hidden");
+      payoffSec?.classList.add("hidden");
     } else {
       empty?.classList.add("hidden");
+      payoffSec?.classList.remove("hidden");
       state.debts.forEach((d) => list.appendChild(buildDebtRow(d)));
     }
 
-    if (planTab === "payoff") renderPayoff();
+    renderPayoff();
     paintIcons();
     focusPendingDebt();
   }
@@ -1830,7 +1903,6 @@
     savePlanner();
     editingDebtId = id;
     pendingFocusDebtId = id;
-    planTab = "debts";
     if (parseHash() !== "plan") {
       location.hash = "#/plan";
       return;
@@ -1850,6 +1922,17 @@
   }
 
   function renderPayoff() {
+    const grid = el("strategyCards");
+    if (!grid) return;
+    if (!state.debts.length) {
+      grid.replaceChildren();
+      if (chartInstance) {
+        chartInstance.destroy();
+        chartInstance = null;
+      }
+      return;
+    }
+
     const loans = loansForSimulate();
     const { income, mustPayBills } = cashflowForPayoff();
     const results = {
@@ -1875,8 +1958,6 @@
       priority: { title: "People first", blurb: "People, then overdrafts, then other" },
     };
 
-    const grid = el("strategyCards");
-    if (!grid) return;
     grid.replaceChildren();
     order.forEach((k) => {
       const r = results[k];
@@ -1900,10 +1981,22 @@
     updateChart(results[best].history || [], results[compareKey].history || []);
   }
 
+  function chartThemeColors() {
+    const cs = getComputedStyle(document.documentElement);
+    const read = (name, fallback) => (cs.getPropertyValue(name).trim() || fallback);
+    return {
+      mint: read("--mint", "#e85d8a"),
+      gold: read("--gold", "#d4b06a"),
+      muted: read("--muted-strong", "rgba(220,214,235,0.72)"),
+      grid: read("--separator", "rgba(255,255,255,0.08)"),
+    };
+  }
+
   function updateChart(histA, histB) {
     const canvas = el("debtChart");
     if (!canvas || !window.Chart) return;
     const labels = histA.map((_, i) => (i === 0 ? "Now" : `M${i}`));
+    const colors = chartThemeColors();
     if (chartInstance) chartInstance.destroy();
     chartInstance = new Chart(canvas, {
       type: "line",
@@ -1913,14 +2006,14 @@
           {
             label: "Recommended path",
             data: histA,
-            borderColor: "#e85d8a",
+            borderColor: colors.mint,
             tension: 0.25,
             pointRadius: 0,
           },
           {
             label: "Comparison",
             data: histB,
-            borderColor: "#d4b06a",
+            borderColor: colors.gold,
             tension: 0.25,
             pointRadius: 0,
           },
@@ -1929,10 +2022,10 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: "rgba(220,214,235,0.82)" } } },
+        plugins: { legend: { labels: { color: colors.muted } } },
         scales: {
-          x: { ticks: { color: "rgba(220,214,235,0.72)", maxTicksLimit: 8 }, grid: { color: "rgba(255,255,255,0.06)" } },
-          y: { ticks: { color: "rgba(220,214,235,0.72)" }, grid: { color: "rgba(255,255,255,0.06)" } },
+          x: { ticks: { color: colors.muted, maxTicksLimit: 8 }, grid: { color: colors.grid } },
+          y: { ticks: { color: colors.muted }, grid: { color: colors.grid } },
         },
       },
     });
@@ -2396,6 +2489,7 @@
       displayCurrency()
     );
     el("prefGbpPerEur").value = String(gbpPerEurRate());
+    applyTheme(state.preferences.theme);
     const signedIn = !!state.activeFingerprint;
     el("loggedInActions")?.classList.toggle("hidden", !signedIn);
     el("guestAuth")?.classList.toggle("hidden", signedIn);
@@ -2531,15 +2625,17 @@
       "GBP"
     );
 
-    document.querySelectorAll("[data-plan-tab]").forEach((b) => {
+    el("btnAddDebt")?.addEventListener("click", () => addDebtInline());
+
+    document.querySelectorAll("[data-theme-opt]").forEach((b) => {
       b.addEventListener("click", () => {
-        planTab = b.getAttribute("data-plan-tab");
-        renderPlan();
-        paintIcons();
+        const theme = b.getAttribute("data-theme-opt") === "light" ? "light" : "dark";
+        state.preferences = mergePreferences({ ...state.preferences, theme });
+        applyTheme(theme);
+        savePlanner();
+        if (route === "plan") renderPayoff();
       });
     });
-
-    el("btnAddDebt")?.addEventListener("click", () => addDebtInline());
 
     document.querySelectorAll("[data-report-period]").forEach((b) => {
       b.addEventListener("click", () => {
@@ -2625,6 +2721,7 @@
       state.preferences = mergePreferences({
         currency: state.preferences.currency,
         gbpPerEur: Number(el("prefGbpPerEur").value),
+        theme: state.preferences.theme,
       });
       savePlanner();
       refresh();
@@ -2735,6 +2832,7 @@
     loadSession();
     loadProfile();
     loadPlanner();
+    applyTheme(state.preferences.theme);
     bind();
     setRoute(parseHash(), false);
     paintIcons();
