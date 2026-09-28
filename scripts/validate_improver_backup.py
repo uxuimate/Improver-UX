@@ -41,8 +41,15 @@ def main() -> int:
     for key in ("income", "mustPayBills"):
         if key not in planner:
             print(f"planner.{key} missing (may still load if zero).", file=sys.stderr)
-    print(f"OK, backup from {data.get('exportedAt', '?')}")
+    schema = planner.get("schemaVersion", 1)
+    print(f"OK, backup from {data.get('exportedAt', '?')} (planner schemaVersion={schema})")
     print(f"   File: {path.resolve()}")
+    if "transactions" in planner and not isinstance(planner.get("transactions"), list):
+        print("planner.transactions present but not a list.", file=sys.stderr)
+        return 2
+    if "debts" in planner and not isinstance(planner.get("debts"), list):
+        print("planner.debts present but not a list.", file=sys.stderr)
+        return 2
     return 0
 
 

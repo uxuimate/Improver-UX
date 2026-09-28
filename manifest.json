@@ -1,9 +1,17 @@
 {
-  "name": "CalmPlan",
-  "short_name": "CalmPlan",
-  "description": "UK income, bills, and debt payoff. People first.",
+  "name": "Veiro",
+  "short_name": "Veiro",
+  "description": "Finance and expense tracking for small business.",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#050714",
-  "theme_color": "#050714"
+  "background_color": "#09070c",
+  "theme_color": "#09070c",
+  "icons": [
+    {
+      "src": "veiro-logo-compact.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
 }
