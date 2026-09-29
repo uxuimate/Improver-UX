@@ -1200,39 +1200,6 @@
     return state.debts.reduce((s, d) => s + debtAmountToGbpMinor(d, d.plannedMonthlyMinor || 0), 0);
   }
 
-  function needsAttention() {
-    const items = [];
-    const thisMonth = ymNow();
-    const generic = new Set(["", "Other", "Imported monthly total", "Month archive"]);
-    state.transactions.forEach((t) => {
-      const cat = String(t.category || "").trim();
-      const note = String(t.note || "").trim();
-      const hasName = (cat && !generic.has(cat)) || (note && !generic.has(note));
-      if (!hasName) {
-        items.push({
-          id: t.id,
-          kind: "uncategorised",
-          label: `${note || cat || "Untitled"} · ${formatMoneyMinor(t.amountMinor, t.currency)}`,
-        });
-        return;
-      }
-      // Only nudge for missing receipts on this month's business expenses
-      if (
-        t.scope === "business" &&
-        t.type === "expense" &&
-        !t.receiptId &&
-        String(t.date || "").slice(0, 7) === thisMonth
-      ) {
-        items.push({
-          id: t.id,
-          kind: "receipt",
-          label: `${cat || note} · missing receipt`,
-        });
-      }
-    });
-    return items.slice(0, 12);
-  }
-
   function categoriesForDraft() {
     if (txDraft.type === "income") return Data.CATEGORIES.income;
     if (txDraft.scope === "business") return Data.CATEGORIES.businessExpenses;
@@ -1329,44 +1296,6 @@
 
     if (el("homeDebtTotal")) el("homeDebtTotal").textContent = formatGbpStoredMinor(totalOwedGbpMinor());
     if (el("homeDebtPlan")) el("homeDebtPlan").textContent = formatGbpStoredMinor(plannedThisMonthGbpMinor());
-
-    const list = el("homeAttention");
-    if (!list) return;
-    const items = needsAttention();
-    list.replaceChildren();
-    if (!items.length) {
-      const li = document.createElement("li");
-      li.innerHTML = `<p class="attention-list__msg">All caught up.</p>`;
-      list.appendChild(li);
-      return;
-    }
-    items.forEach((item) => {
-      const li = document.createElement("li");
-      const msg = document.createElement("p");
-      msg.className = "attention-list__msg";
-      msg.textContent = item.label;
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "text-link";
-      btn.textContent = "Fix";
-      btn.addEventListener("click", () => {
-        const t = repo.getTransaction(item.id);
-        if (t?.scope) {
-          if (el("activityScope")) el("activityScope").value = t.scope;
-          document.querySelectorAll("[data-activity-scope]").forEach((x) => {
-            const on = x.getAttribute("data-activity-scope") === t.scope;
-            x.classList.toggle("active", on);
-            x.setAttribute("aria-selected", on ? "true" : "false");
-          });
-        }
-        if (t?.date) activityMonth = t.date.slice(0, 7);
-        pendingFocusTxId = item.id;
-        if (parseHash() !== "activity") location.hash = "#/activity";
-        else refresh();
-      });
-      li.append(msg, btn);
-      list.appendChild(li);
-    });
   }
 
   function formatShortDate(ymd) {
@@ -1546,7 +1475,7 @@
     surface.addEventListener(
       "touchstart",
       (e) => {
-        if (e.target.closest("input, button, .cday, .ledger-row__delete")) return;
+        if (e.target.closest("input, button, .cday, .ledger-row__delete, .ledger-row__handle")) return;
         startX = e.touches[0].clientX;
         baseX = row.classList.contains("is-swipe-open") ? -reveal() : 0;
         dragging = true;
@@ -1584,6 +1513,57 @@
       },
       { passive: true }
     );
+  }
+
+  function bindLedgerReorder(listEl) {
+    if (!listEl || listEl.dataset.reorderBound === "1") return;
+    listEl.dataset.reorderBound = "1";
+    let dragRow = null;
+    let dragPointerId = null;
+
+    listEl.addEventListener("pointerdown", (e) => {
+      const handle = e.target.closest(".ledger-row__handle");
+      if (!handle || !listEl.contains(handle)) return;
+      if (e.button !== 0 && e.pointerType === "mouse") return;
+      dragRow = handle.closest(".ledger-row");
+      if (!dragRow) return;
+      dragPointerId = e.pointerId;
+      dragRow.classList.add("is-dragging");
+      handle.setPointerCapture?.(e.pointerId);
+      e.preventDefault();
+    });
+
+    listEl.addEventListener("pointermove", (e) => {
+      if (!dragRow || e.pointerId !== dragPointerId) return;
+      const y = e.clientY;
+      const rows = [...listEl.querySelectorAll(".ledger-row[data-tx-id]")].filter((r) => r !== dragRow);
+      const target = rows.find((r) => {
+        const rect = r.getBoundingClientRect();
+        return y >= rect.top && y <= rect.bottom;
+      });
+      if (target) {
+        const after = y > target.getBoundingClientRect().top + target.offsetHeight / 2;
+        const ref = after ? target.nextElementSibling : target;
+        if (ref !== dragRow) listEl.insertBefore(dragRow, ref);
+      }
+    });
+
+    const endDrag = (e) => {
+      if (!dragRow || e.pointerId !== dragPointerId) return;
+      dragRow.classList.remove("is-dragging");
+      dragRow = null;
+      dragPointerId = null;
+      persistLedgerOrder(listEl);
+      renderActivitySummary(
+        repo.getTransactions({
+          month: activityFilter().month || undefined,
+          scope: activityFilter().scope || undefined,
+        })
+      );
+    };
+
+    listEl.addEventListener("pointerup", endDrag);
+    listEl.addEventListener("pointercancel", endDrag);
   }
 
   function buildLedgerInlineFields(t) {
@@ -1690,8 +1670,14 @@
     const surface = document.createElement("div");
     surface.className = "ledger-row__surface";
 
+    const handle = document.createElement("button");
+    handle.type = "button";
+    handle.className = "ledger-row__handle";
+    handle.setAttribute("aria-label", "Drag to reorder");
+    handle.innerHTML = `<i data-lucide="grip-vertical" aria-hidden="true"></i>`;
+
     const { fields, focusEl } = buildLedgerInlineFields(t);
-    surface.append(fields);
+    surface.append(handle, fields);
     wrap.append(actions, surface);
 
     bindLedgerSwipe(wrap, t.id);
@@ -1807,6 +1793,7 @@
     }
     empty?.classList.add("hidden");
     txs.forEach((t) => list.appendChild(buildLedgerRow(t)));
+    bindLedgerReorder(list);
     paintIcons();
   }
 

@@ -734,11 +734,11 @@ select:focus-visible,
 .app-content {
   width: min(100%, var(--content-max));
   margin: 0 auto;
-  padding: 14px 18px 36px;
+  padding: 16px 18px 40px;
 }
 
 .panel-lead {
-  margin: 0 0 18px;
+  margin: 0 0 14px;
   color: var(--muted-strong);
   font-size: 0.9375rem;
   font-weight: 400;
@@ -858,7 +858,7 @@ select:focus-visible,
   align-items: center;
   justify-content: center;
   gap: 20px;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
   min-height: 44px;
 }
 
@@ -896,12 +896,12 @@ select:focus-visible,
 .stat-tiles {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 18px;
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
 .stat-tile {
-  padding: 14px 12px;
+  padding: 16px 14px;
   border-radius: var(--radius-lg);
 }
 
@@ -942,9 +942,9 @@ select:focus-visible,
 }
 
 .panel-block {
-  margin-bottom: 16px;
-  padding: 4px 0;
-  border-radius: var(--radius);
+  margin-bottom: 20px;
+  padding: 4px 0 8px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
@@ -954,7 +954,7 @@ select:focus-visible,
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 0;
-  padding: 12px 16px 8px;
+  padding: 16px 18px 10px;
 }
 
 .panel-block__title {
@@ -965,6 +965,11 @@ select:focus-visible,
   color: var(--muted-strong);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+/* Standalone titles inside panels (Reports category, etc.) */
+.panel-block > .panel-block__title {
+  padding: 16px 18px 10px;
 }
 
 .meta-label {
@@ -1019,7 +1024,13 @@ select:focus-visible,
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
-  padding: 4px 16px 16px;
+  padding: 4px 18px 18px;
+}
+
+.debt-snapshot .money-num {
+  font-size: 1.1rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
 }
 
 /* Filters / forms */
@@ -1626,7 +1637,7 @@ select option {
 }
 
 .home-scope-tabs {
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .home-book {
@@ -1912,7 +1923,9 @@ select option {
 .ledger-row__surface {
   position: relative;
   z-index: 1;
-  display: block;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: stretch;
   background: color-mix(in srgb, var(--bg-deep) 55%, rgba(36, 30, 44, 0.98));
   border: none;
   backdrop-filter: none;
@@ -1926,11 +1939,45 @@ select option {
   background: #ffffff;
 }
 
+.ledger-row__handle {
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: grab;
+  touch-action: none;
+  opacity: 0.55;
+}
+
+.ledger-row__handle:active {
+  cursor: grabbing;
+  opacity: 0.9;
+}
+
+.ledger-row__handle i,
+.ledger-row__handle svg {
+  width: 16px;
+  height: 16px;
+}
+
+.ledger-row.is-dragging {
+  opacity: 0.92;
+  z-index: 4;
+}
+
+.ledger-row.is-dragging .ledger-row__surface {
+  box-shadow: var(--shadow-glass);
+}
+
 .ledger-row__fields {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(4.5rem, 5.5rem) 2.85rem 32px;
   gap: 2px 6px;
-  padding: 6px 6px 6px 14px;
+  padding: 6px 6px 6px 2px;
   align-items: center;
   min-height: 44px;
 }
@@ -3039,29 +3086,31 @@ select option {
 .cat-breakdown {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 18px 10px;
 }
 
 .cat-breakdown li {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 0;
-  border-top: 1px solid var(--glass-border);
+  padding: 14px 0;
+  border-top: 0.5px solid var(--separator);
   font-variant-numeric: tabular-nums;
-  min-height: var(--tap-min);
+  min-height: 48px;
   align-items: center;
 }
 
 .cat-breakdown li:first-child {
   border-top: none;
-  padding-top: 0;
+  padding-top: 4px;
 }
 
 .export-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
+  margin-top: 4px;
+  margin-bottom: 8px;
 }
 
 /* Empty */
