@@ -9,8 +9,8 @@
     <title>Veiro</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=17" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;450;500;600;650;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css?v=30" />
     <link rel="manifest" href="manifest.json" />
     <link rel="icon" href="veiro-logo-compact.png" type="image/png" />
     <link rel="apple-touch-icon" href="veiro-logo-compact.png" />
@@ -43,6 +43,10 @@
             <p class="app-topbar__sub" id="pageSub"></p>
           </div>
           <div class="app-topbar__right">
+            <button type="button" class="icon-btn theme-toggle-btn" id="btnThemeToggle" aria-label="Switch light or dark theme">
+              <i data-lucide="sun" class="theme-toggle__icon theme-toggle__icon--for-dark" aria-hidden="true"></i>
+              <i data-lucide="moon" class="theme-toggle__icon theme-toggle__icon--for-light hidden" aria-hidden="true"></i>
+            </button>
             <button type="button" class="avatar-btn" id="btnOpenSettings" aria-label="Open settings">
               <span class="avatar-btn__img" id="navAvatar" aria-hidden="true"></span>
             </button>
@@ -73,40 +77,32 @@
               </article>
             </section>
 
-            <section class="split-books" aria-label="Personal and business">
-              <article class="split-books__card split-books__card--personal">
-                <div class="split-books__head">
-                  <span class="scope-badge scope-badge--personal"><i data-lucide="user" aria-hidden="true"></i> Personal</span>
-                </div>
-                <div class="split-books__metrics">
-                  <div>
-                    <p class="split-books__label">Money in</p>
-                    <p class="split-books__value money-num" id="homePersonalIn">£0.00</p>
+            <div class="scope-tabs home-scope-tabs" role="tablist" aria-label="Personal or business summary">
+              <button type="button" class="scope-tabs__btn scope-tabs__btn--personal active" role="tab" aria-selected="true" data-home-scope="personal">
+                <i data-lucide="user" aria-hidden="true"></i><span>Personal</span>
+              </button>
+              <button type="button" class="scope-tabs__btn scope-tabs__btn--business" role="tab" aria-selected="false" data-home-scope="business">
+                <i data-lucide="briefcase" aria-hidden="true"></i><span>Business</span>
+              </button>
+            </div>
+            <input type="hidden" id="homeScope" value="personal" />
+
+            <section class="home-book" aria-label="Books summary">
+              <article class="home-book__card">
+                <div class="home-book__metrics">
+                  <div class="home-book__metric home-book__metric--in">
+                    <p class="home-book__label">Money in</p>
+                    <p class="home-book__value money-num" id="homeScopeIn">£0.00</p>
                   </div>
-                  <div>
-                    <p class="split-books__label">Expenses out</p>
-                    <p class="split-books__value money-num" id="homePersonalOut">£0.00</p>
-                  </div>
-                </div>
-                <p class="split-books__label">Left</p>
-                <p class="split-books__value money-num" id="homePersonalLeft">£0.00</p>
-              </article>
-              <article class="split-books__card split-books__card--business">
-                <div class="split-books__head">
-                  <span class="scope-badge scope-badge--business"><i data-lucide="briefcase" aria-hidden="true"></i> Business</span>
-                </div>
-                <div class="split-books__metrics">
-                  <div>
-                    <p class="split-books__label">Money in</p>
-                    <p class="split-books__value money-num" id="homeBusinessIn">£0.00</p>
-                  </div>
-                  <div>
-                    <p class="split-books__label">Expenses out</p>
-                    <p class="split-books__value money-num" id="homeBusinessOut">£0.00</p>
+                  <div class="home-book__metric home-book__metric--out">
+                    <p class="home-book__label">Money out</p>
+                    <p class="home-book__value money-num" id="homeScopeOut">£0.00</p>
                   </div>
                 </div>
-                <p class="split-books__label">Profit</p>
-                <p class="split-books__value money-num" id="homeBusinessProfit">£0.00</p>
+                <div class="home-book__footer">
+                  <p class="home-book__label" id="homeScopeResultLabel">Left</p>
+                  <p class="home-book__value home-book__value--hero money-num" id="homeScopeResult">£0.00</p>
+                </div>
               </article>
             </section>
 
@@ -215,18 +211,9 @@
             </div>
           </section>
 
-          <!-- Reports -->
+          <!-- Reports (business only) -->
           <section class="route-panel" id="panelReports" data-route="reports" hidden>
-            <p class="panel-lead">Summaries from your ledger. Nothing is typed in by hand.</p>
-            <div class="scope-tabs" role="tablist" aria-label="Report scope">
-              <button type="button" class="scope-tabs__btn scope-tabs__btn--personal active" role="tab" aria-selected="true" data-report-scope="personal">
-                <i data-lucide="user" aria-hidden="true"></i><span>Personal</span>
-              </button>
-              <button type="button" class="scope-tabs__btn scope-tabs__btn--business" role="tab" aria-selected="false" data-report-scope="business">
-                <i data-lucide="briefcase" aria-hidden="true"></i><span>Business</span>
-              </button>
-            </div>
-            <input type="hidden" id="reportScope" value="personal" />
+            <p class="panel-lead">Business summaries from your ledger. Nothing is typed in by hand.</p>
 
             <div class="segmented" role="tablist" aria-label="Report period">
               <button type="button" class="segmented__btn active" data-report-period="month" aria-selected="true">Month</button>
@@ -244,12 +231,12 @@
                 <p class="stat-tile__value money-num" id="reportIncome">£0.00</p>
               </article>
               <article class="stat-tile">
-                <p class="stat-tile__label">Business profit</p>
-                <p class="stat-tile__value money-num" id="reportBizProfit">£0.00</p>
+                <p class="stat-tile__label">Expenses</p>
+                <p class="stat-tile__value money-num" id="reportExpenses">£0.00</p>
               </article>
               <article class="stat-tile stat-tile--accent">
-                <p class="stat-tile__label">Personal left</p>
-                <p class="stat-tile__value money-num" id="reportPersonalLeft">£0.00</p>
+                <p class="stat-tile__label">Profit</p>
+                <p class="stat-tile__value money-num" id="reportBizProfit">£0.00</p>
               </article>
             </section>
             <section class="panel-block">
@@ -450,6 +437,14 @@
           <button type="button" class="icon-btn close-modal" id="btnCloseProfile" aria-label="Close"><i data-lucide="x"></i></button>
         </div>
         <div class="modal-body">
+          <div class="appearance-prefs-block">
+            <p class="section-label">Appearance</p>
+            <p class="muted appearance-prefs-block__hint">Light or dark mode for the whole app</p>
+            <div class="segmented segmented--sm appearance-segmented" role="tablist" aria-label="App theme">
+              <button type="button" class="segmented__btn active" data-theme-opt="dark" id="themeOptDark" role="tab" aria-selected="true"><i data-lucide="moon" aria-hidden="true"></i> Dark</button>
+              <button type="button" class="segmented__btn" data-theme-opt="light" id="themeOptLight" role="tab" aria-selected="false"><i data-lucide="sun" aria-hidden="true"></i> Light</button>
+            </div>
+          </div>
           <div class="photo-block">
             <div class="photo-preview" id="photoPreview"></div>
             <div class="photo-actions">
@@ -464,13 +459,6 @@
             <span class="field-label">Display name</span>
             <input type="text" id="displayName" maxlength="80" autocomplete="name" />
           </label>
-          <div class="currency-prefs-block">
-            <p class="section-label tight">Appearance</p>
-            <div class="segmented segmented--sm" role="tablist" aria-label="App theme">
-              <button type="button" class="segmented__btn active" data-theme-opt="dark" id="themeOptDark" role="tab" aria-selected="true">Dark</button>
-              <button type="button" class="segmented__btn" data-theme-opt="light" id="themeOptLight" role="tab" aria-selected="false">Light</button>
-            </div>
-          </div>
           <div class="currency-prefs-block">
             <p class="section-label tight">Currency</p>
             <div class="row two">
@@ -548,9 +536,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script src="repository.js?v=17"></script>
-    <script src="receipts.js?v=17"></script>
-    <script src="app.js?v=17"></script>
+    <script src="repository.js?v=30"></script>
+    <script src="receipts.js?v=30"></script>
+    <script src="app.js?v=30"></script>
   </body>
 
 </html>

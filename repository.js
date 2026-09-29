@@ -149,6 +149,34 @@
     return "Other";
   }
 
+  /** Keep the user's line name when the taxonomy guess falls back to Other. */
+  function preferNamedCategory(guessed, name, fallback) {
+    const g = String(guessed || "").trim();
+    const n = String(name || "").trim().slice(0, 80);
+    if (g && g !== "Other") return g;
+    if (n && n !== "Other" && n !== "Imported monthly total" && n !== "Month archive") return n;
+    if (fallback) return fallback;
+    return g || "Other";
+  }
+
+  const GENERIC_CATEGORIES = new Set(["Other", "Imported monthly total", "Month archive", ""]);
+
+  /**
+   * Lift original names out of note when category was collapsed to Other / import stubs.
+   * Safe / idempotent for already-good data.
+   */
+  function repairPreservedNames(transactions) {
+    if (!Array.isArray(transactions)) return [];
+    return transactions.map((t) => {
+      if (!t || typeof t !== "object") return t;
+      const cat = String(t.category || "").trim();
+      const note = String(t.note || "").trim().slice(0, 80);
+      if (!GENERIC_CATEGORIES.has(cat)) return t;
+      if (!note || GENERIC_CATEGORIES.has(note)) return t;
+      return { ...t, category: note, note };
+    });
+  }
+
   function normalizeTransaction(raw, uidFn) {
     const idFn = typeof uidFn === "function" ? uidFn : () => global.crypto.randomUUID();
     const r = raw && typeof raw === "object" ? raw : {};
@@ -173,6 +201,7 @@
     if (typeof r.note === "string" && r.note.trim()) tx.note = r.note.trim().slice(0, 200);
     if (typeof r.receiptId === "string" && r.receiptId) tx.receiptId = r.receiptId;
     if (typeof r.debtId === "string" && r.debtId) tx.debtId = r.debtId;
+    if (Number.isFinite(Number(r.sortOrder))) tx.sortOrder = Math.round(Number(r.sortOrder));
     return tx;
   }
 
@@ -254,7 +283,7 @@
             type: "income",
             amountMinor: toMinor(amount),
             currency: "GBP",
-            category: guessIncomeCategory(item.name),
+            category: preferNamedCategory(guessIncomeCategory(item.name), item.name),
             scope: "personal",
             note: item.name || undefined,
             createdAt: now,
@@ -278,7 +307,7 @@
             type: "expense",
             amountMinor: toMinor(amount),
             currency: "GBP",
-            category: guessPersonalExpenseCategory(item.name),
+            category: preferNamedCategory(guessPersonalExpenseCategory(item.name), item.name),
             scope: "personal",
             note: item.name || undefined,
             createdAt: now,
@@ -309,7 +338,11 @@
                 type: "income",
                 amountMinor: toMinor(amount),
                 currency: "GBP",
-                category: guessIncomeCategory(line.name) === "Other" ? "Self-employed income" : guessIncomeCategory(line.name),
+                category: preferNamedCategory(
+                  guessIncomeCategory(line.name),
+                  line.name,
+                  "Self-employed income"
+                ),
                 scope: "business",
                 note: line.name || entry.label || undefined,
                 createdAt: now,
@@ -330,7 +363,7 @@
                 type: "expense",
                 amountMinor: toMinor(amount),
                 currency: "GBP",
-                category: guessBusinessExpenseCategory(line.name),
+                category: preferNamedCategory(guessBusinessExpenseCategory(line.name), line.name),
                 scope: "business",
                 note: line.name || entry.label || undefined,
                 createdAt: now,
@@ -354,9 +387,9 @@
               type: "income",
               amountMinor: toMinor(income),
               currency: "GBP",
-              category: "Imported monthly total",
+              category: preferNamedCategory("Other", entry.label, "Business income"),
               scope: "business",
-              note: entry.label || "Imported monthly total",
+              note: entry.label || "Business income",
               createdAt: now,
               updatedAt: now,
             },
@@ -373,9 +406,9 @@
               type: "expense",
               amountMinor: toMinor(expenses),
               currency: "GBP",
-              category: "Imported monthly total",
+              category: preferNamedCategory("Other", entry.label, "Business expenses"),
               scope: "business",
-              note: entry.label || "Imported monthly total",
+              note: entry.label || "Business expenses",
               createdAt: now,
               updatedAt: now,
             },
@@ -432,7 +465,7 @@
               type: "income",
               amountMinor: toMinor(income),
               currency: "GBP",
-              category: "Month archive",
+              category: preferNamedCategory("Other", entry.label, "Month archive"),
               scope: "personal",
               note: entry.label || "Month archive",
               createdAt: now,
@@ -451,7 +484,7 @@
               type: "expense",
               amountMinor: toMinor(bills),
               currency: "GBP",
-              category: "Month archive",
+              category: preferNamedCategory("Other", entry.label, "Month archive"),
               scope: "personal",
               note: entry.label || "Month archive",
               createdAt: now,
@@ -507,13 +540,19 @@
       if (
         fromNote &&
         /^\d{4}-\d{2}-\d{2}$/.test(fromNote) &&
-        (t.category === "Imported monthly total" || t.category === "Month archive") &&
+        (t.category === "Imported monthly total" ||
+          t.category === "Month archive" ||
+          t.category === "Business income" ||
+          t.category === "Business expenses" ||
+          (t.note && t.note === t.category && dateFromMonthLabel(t.category, null))) &&
         t.date.slice(0, 7) !== fromNote.slice(0, 7)
       ) {
         return { ...t, date: fromNote };
       }
       return t;
     });
+
+    transactions = repairPreservedNames(transactions);
 
     if (Array.isArray(p.debts) && p.debts.length > 0) {
       debts = p.debts.map((d) => normalizeDebt(d, uidFn));
@@ -602,7 +641,14 @@
         return txs()
           .filter((t) => matchesFilter(t, filter))
           .slice()
-          .sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.id).localeCompare(String(a.id)));
+          .sort((a, b) => {
+            const ao = Number.isFinite(a.sortOrder) ? a.sortOrder : null;
+            const bo = Number.isFinite(b.sortOrder) ? b.sortOrder : null;
+            if (ao != null && bo != null && ao !== bo) return ao - bo;
+            if (ao != null && bo == null) return -1;
+            if (ao == null && bo != null) return 1;
+            return String(b.date).localeCompare(String(a.date)) || String(a.id).localeCompare(String(b.id));
+          });
       },
 
       getTransaction(id) {
@@ -705,6 +751,7 @@
     buildTransactionsFromLegacy,
     buildDebtsFromLegacyLoans,
     migratePlanner,
+    repairPreservedNames,
     syncLedgerFromLegacyUi,
     createRepository,
   };

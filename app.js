@@ -51,7 +51,7 @@
   let viewMonth = ymNow();
   let reportPeriod = "month";
   let reportAnchor = ymNow();
-  let reportScope = "personal";
+  let homeScope = "personal";
   let selectedStrategy = "avalanche";
   let chartInstance = null;
   let authTab = "signin";
@@ -59,9 +59,8 @@
   let pendingReceiptId = null;
   let undoPayload = null;
   let undoTimer = null;
-  let pendingFocusTxId = null;
   let pendingFocusDebtId = null;
-  let editingTxId = null;
+  let pendingFocusTxId = null;
   let editingDebtId = null;
   let activityMonth = ymNow();
 
@@ -320,7 +319,19 @@
     if (!hidden || !valueEl) return;
     const next = ymd || todayYmd();
     hidden.value = next;
-    valueEl.textContent = formatShortDate(next);
+    if (root.classList.contains("cday--compact")) {
+      const parts = formatCompactDateParts(next);
+      valueEl.replaceChildren();
+      const dayMon = document.createElement("span");
+      dayMon.className = "cday__daymon";
+      dayMon.textContent = parts.dayMon;
+      const year = document.createElement("span");
+      year.className = "cday__year";
+      year.textContent = parts.year;
+      valueEl.append(dayMon, year);
+    } else {
+      valueEl.textContent = formatShortDate(next);
+    }
     const [y, m] = next.split("-");
     root.dataset.viewYm = `${y}-${m}`;
     paintCDayGrid(root);
@@ -546,6 +557,19 @@
       b.classList.toggle("active", on);
       b.setAttribute("aria-selected", on ? "true" : "false");
     });
+    const forDark = document.querySelector(".theme-toggle__icon--for-dark");
+    const forLight = document.querySelector(".theme-toggle__icon--for-light");
+    forDark?.classList.toggle("hidden", next === "light");
+    forLight?.classList.toggle("hidden", next !== "light");
+    paintIcons();
+  }
+
+  function toggleTheme() {
+    const next = state.preferences.theme === "light" ? "dark" : "light";
+    state.preferences = mergePreferences({ ...state.preferences, theme: next });
+    applyTheme(next);
+    savePlanner();
+    if (route === "plan") renderPayoff();
   }
 
   function displayCurrency() {
@@ -849,6 +873,10 @@
       uid
     );
     state.transactions = repairBusinessSpread(migrated.transactions, state.businessLog);
+    if (typeof Data.repairPreservedNames === "function") {
+      state.transactions = Data.repairPreservedNames(state.transactions);
+    }
+    pruneBlankStubTxs(null);
     state.debts = migrated.debts;
     state.schemaVersion = Data.SCHEMA_VERSION;
     applyTheme(state.preferences.theme);
@@ -1174,15 +1202,32 @@
 
   function needsAttention() {
     const items = [];
+    const thisMonth = ymNow();
+    const generic = new Set(["", "Other", "Imported monthly total", "Month archive"]);
     state.transactions.forEach((t) => {
-      if (!t.category || t.category === "Imported monthly total") {
+      const cat = String(t.category || "").trim();
+      const note = String(t.note || "").trim();
+      const hasName = (cat && !generic.has(cat)) || (note && !generic.has(note));
+      if (!hasName) {
         items.push({
           id: t.id,
           kind: "uncategorised",
-          label: `${t.note || t.category || "Uncategorised"} · ${formatMoneyMinor(t.amountMinor, t.currency)}`,
+          label: `${note || cat || "Untitled"} · ${formatMoneyMinor(t.amountMinor, t.currency)}`,
         });
-      } else if (t.scope === "business" && t.type === "expense" && !t.receiptId) {
-        items.push({ id: t.id, kind: "receipt", label: `${t.category} · missing receipt` });
+        return;
+      }
+      // Only nudge for missing receipts on this month's business expenses
+      if (
+        t.scope === "business" &&
+        t.type === "expense" &&
+        !t.receiptId &&
+        String(t.date || "").slice(0, 7) === thisMonth
+      ) {
+        items.push({
+          id: t.id,
+          kind: "receipt",
+          label: `${cat || note} · missing receipt`,
+        });
       }
     });
     return items.slice(0, 12);
@@ -1269,12 +1314,18 @@
 
     const personal = monthSum(viewMonth, { scope: "personal" });
     const business = monthSum(viewMonth, { scope: "business" });
-    if (el("homePersonalIn")) el("homePersonalIn").textContent = formatGbpStoredMinor(personal.incomeMinor);
-    if (el("homePersonalOut")) el("homePersonalOut").textContent = formatGbpStoredMinor(personal.expenseMinor);
-    if (el("homePersonalLeft")) el("homePersonalLeft").textContent = formatGbpStoredMinor(personal.leftMinor);
-    if (el("homeBusinessIn")) el("homeBusinessIn").textContent = formatGbpStoredMinor(business.incomeMinor);
-    if (el("homeBusinessOut")) el("homeBusinessOut").textContent = formatGbpStoredMinor(business.expenseMinor);
-    if (el("homeBusinessProfit")) el("homeBusinessProfit").textContent = formatGbpStoredMinor(business.leftMinor);
+    const scope = el("homeScope")?.value || homeScope || "personal";
+    homeScope = scope === "business" ? "business" : "personal";
+    const book = homeScope === "business" ? business : personal;
+    if (el("homeScopeIn")) el("homeScopeIn").textContent = formatGbpStoredMinor(book.incomeMinor);
+    if (el("homeScopeOut")) el("homeScopeOut").textContent = formatGbpStoredMinor(book.expenseMinor);
+    if (el("homeScopeResult")) el("homeScopeResult").textContent = formatGbpStoredMinor(book.leftMinor);
+    if (el("homeScopeResultLabel")) el("homeScopeResultLabel").textContent = homeScope === "business" ? "Profit" : "Left";
+    document.querySelectorAll("[data-home-scope]").forEach((b) => {
+      const on = b.getAttribute("data-home-scope") === homeScope;
+      b.classList.toggle("active", on);
+      b.setAttribute("aria-selected", on ? "true" : "false");
+    });
 
     if (el("homeDebtTotal")) el("homeDebtTotal").textContent = formatGbpStoredMinor(totalOwedGbpMinor());
     if (el("homeDebtPlan")) el("homeDebtPlan").textContent = formatGbpStoredMinor(plannedThisMonthGbpMinor());
@@ -1309,7 +1360,6 @@
           });
         }
         if (t?.date) activityMonth = t.date.slice(0, 7);
-        editingTxId = item.id;
         pendingFocusTxId = item.id;
         if (parseHash() !== "activity") location.hash = "#/activity";
         else refresh();
@@ -1325,6 +1375,21 @@
       month: "short",
       year: "numeric",
     });
+  }
+
+  function formatCompactDate(ymd) {
+    const d = new Date(ymd + "T12:00:00");
+    const day = d.getDate();
+    const mon = d.toLocaleDateString("en-GB", { month: "short" });
+    return `${day} ${mon}`;
+  }
+
+  function formatCompactDateParts(ymd) {
+    const d = new Date(ymd + "T12:00:00");
+    return {
+      dayMon: `${d.getDate()} ${d.toLocaleDateString("en-GB", { month: "short" })}`,
+      year: String(d.getFullYear()),
+    };
   }
 
   function activityFilter() {
@@ -1355,7 +1420,7 @@
         <p class="ledger-dock__line"><span>Income</span><strong class="is-income">${formatGbpStoredMinor(income)}</strong></p>
         <p class="ledger-dock__line"><span>Expenses</span><strong class="is-expense">${formatGbpStoredMinor(expense)}</strong></p>
       </div>
-      <div>
+      <div class="ledger-dock__balance-wrap">
         <p class="ledger-dock__balance-label">Balance</p>
         <p class="ledger-dock__balance ${bal >= 0 ? "is-pos" : "is-neg"}">${sign}${formatGbpStoredMinor(balAbs)}</p>
       </div>`;
@@ -1373,7 +1438,7 @@
     Object.assign(t, patch);
     if (patch.type || patch.scope) {
       const cats = categoriesForTx(t.type, t.scope);
-      if (!cats.includes(t.category)) t.category = cats[0] || "Other";
+      if (!String(t.category || "").trim()) t.category = cats[cats.length - 1] || "Other";
     }
     repo.saveTransaction(t);
     savePlanner();
@@ -1408,192 +1473,290 @@
         repo.saveDebt(debt);
       }
     }
-    if (editingTxId === id) editingTxId = null;
     undoPayload = { type: "tx", tx: removed, debtBump: removed.debtId ? removed.amountMinor : 0 };
     showUndo("Transaction deleted");
     savePlanner();
     refresh();
   }
 
-  function formatDateInput(ymd) {
-    const [y, m, d] = String(ymd || todayYmd()).split("-");
-    return `${d}/${m}/${y}`;
+  function copyTxById(id) {
+    const t = repo.getTransaction(id);
+    if (!t) return;
+    const filter = activityFilter();
+    const sortOrder = nextSortOrderForList(filter);
+    repo.saveTransaction({
+      ...t,
+      id: uid(),
+      sortOrder,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    savePlanner();
+    refresh();
   }
 
-  function parseDateInput(raw) {
-    const s = String(raw || "").trim();
-    const m = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/);
-    if (!m) return null;
-    const day = Number(m[1]);
-    const month = Number(m[2]);
-    const year = Number(m[3]);
-    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-    const dt = new Date(year, month - 1, day);
-    if (dt.getFullYear() !== year || dt.getMonth() !== month - 1 || dt.getDate() !== day) return null;
-    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  function nextSortOrderForList(filter) {
+    const list = repo.getTransactions({
+      month: filter.month || undefined,
+      scope: filter.scope || undefined,
+    });
+    const orders = list.map((x) => x.sortOrder).filter((n) => Number.isFinite(n));
+    if (!orders.length) return 0;
+    return Math.min(...orders) - 1;
   }
 
-  function buildLedgerEdit(t) {
-    const edit = document.createElement("div");
-    edit.className = "ledger-edit";
+  function persistLedgerOrder(listEl) {
+    if (!listEl) return;
+    [...listEl.querySelectorAll(".ledger-row[data-tx-id]")].forEach((row, index) => {
+      const id = row.dataset.txId;
+      const t = repo.getTransaction(id);
+      if (!t) return;
+      if (t.sortOrder !== index) {
+        t.sortOrder = index;
+        repo.saveTransaction(t);
+      }
+    });
+    savePlanner();
+  }
 
-    const row1 = document.createElement("div");
-    row1.className = "ledger-edit__row";
+  function bindLedgerSwipe(row, txId) {
+    const surface = row.querySelector(".ledger-row__surface");
+    const actions = row.querySelector(".ledger-row__actions");
+    if (!surface || !actions) return;
+
+    let startX = 0;
+    let baseX = 0;
+    let dragging = false;
+    const reveal = () => Math.min(88, actions.offsetWidth || 88);
+
+    const setOffset = (px, swiping) => {
+      const max = reveal();
+      const x = Math.max(-max, Math.min(0, px));
+      surface.style.transform = `translateX(${x}px)`;
+      row.classList.toggle("is-swipe-open", x <= -max * 0.45);
+      row.classList.toggle("is-swiping", !!swiping && Math.abs(x) > 2);
+      return x;
+    };
+
+    const closeSwipe = () => {
+      setOffset(0, false);
+      row.classList.remove("is-swiping");
+    };
+
+    surface.addEventListener(
+      "touchstart",
+      (e) => {
+        if (e.target.closest("input, button, .cday, .ledger-row__delete")) return;
+        startX = e.touches[0].clientX;
+        baseX = row.classList.contains("is-swipe-open") ? -reveal() : 0;
+        dragging = true;
+      },
+      { passive: true }
+    );
+
+    surface.addEventListener(
+      "touchmove",
+      (e) => {
+        if (!dragging) return;
+        const dx = e.touches[0].clientX - startX;
+        setOffset(baseX + dx, true);
+      },
+      { passive: true }
+    );
+
+    surface.addEventListener("touchend", () => {
+      if (!dragging) return;
+      dragging = false;
+      const open = row.classList.contains("is-swipe-open");
+      setOffset(open ? -reveal() : 0, false);
+      row.classList.toggle("is-swiping", open);
+    });
+
+    row.querySelector("[data-swipe-delete]")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      deleteTxById(txId);
+    });
+
+    document.addEventListener(
+      "touchstart",
+      (e) => {
+        if (!row.contains(e.target)) closeSwipe();
+      },
+      { passive: true }
+    );
+  }
+
+  function buildLedgerInlineFields(t) {
+    const fields = document.createElement("div");
+    fields.className = "ledger-row__fields";
 
     const catIn = document.createElement("input");
-    catIn.className = "cell-input";
+    catIn.className = "ledger-row__input ledger-row__input--desc";
     catIn.type = "text";
     catIn.maxLength = 80;
-    catIn.placeholder = "Name";
+    catIn.placeholder = "Description";
     catIn.autocomplete = "off";
-    catIn.value = t.category || "";
+    const isBlankStub =
+      (!t.note || !String(t.note).trim()) &&
+      (!t.category || t.category === "Other") &&
+      !(t.amountMinor > 0);
+    catIn.value = isBlankStub ? "" : t.category || t.note || "";
     catIn.addEventListener("change", () => {
-      const name = catIn.value.trim() || "Other";
+      const name = catIn.value.trim();
       catIn.value = name;
-      commitTxField(t.id, { category: name });
-      refresh();
+      commitTxField(t.id, { category: name || "Other", note: name || "" });
     });
 
     const amtIn = document.createElement("input");
-    amtIn.className = "cell-input cell-input--num";
+    amtIn.className = "ledger-row__input ledger-row__input--amt";
     amtIn.type = "text";
     amtIn.inputMode = "decimal";
     amtIn.placeholder = "0.00";
-    amtIn.value = t.amountMinor ? Data.fromMinor(t.amountMinor).toFixed(2) : "";
+    amtIn.setAttribute("aria-label", "Amount");
+    const major = t.amountMinor ? Data.fromMinor(t.amountMinor) : 0;
+    amtIn.value = t.amountMinor
+      ? `${t.type === "income" ? "+" : "−"}${major.toFixed(2)}`
+      : "";
+    amtIn.addEventListener("focus", () => {
+      amtIn.value = t.amountMinor ? Data.fromMinor(t.amountMinor).toFixed(2) : "";
+      amtIn.select?.();
+    });
     amtIn.addEventListener("change", () => {
-      const v = parseMajorInput(amtIn.value || "0");
+      const v = parseMajorInput(String(amtIn.value || "0").replace(/^[+−-]/, ""));
       if (!Number.isFinite(v) || v < 0) {
-        amtIn.value = t.amountMinor ? Data.fromMinor(t.amountMinor).toFixed(2) : "";
+        amtIn.value = t.amountMinor
+          ? `${t.type === "income" ? "+" : "−"}${Data.fromMinor(t.amountMinor).toFixed(2)}`
+          : "";
         return;
       }
-      amtIn.value = v.toFixed(2);
       commitTxField(t.id, { amountMinor: Data.toMinor(v) });
-      refresh();
+      t.amountMinor = Data.toMinor(v);
+      amtIn.value = `${t.type === "income" ? "+" : "−"}${v.toFixed(2)}`;
+      renderActivitySummary(
+        repo.getTransactions({
+          month: activityFilter().month || undefined,
+          scope: activityFilter().scope || undefined,
+        })
+      );
+    });
+    amtIn.addEventListener("blur", () => {
+      if (document.activeElement === amtIn) return;
+      const cur = repo.getTransaction(t.id);
+      if (!cur) return;
+      amtIn.value = cur.amountMinor
+        ? `${cur.type === "income" ? "+" : "−"}${Data.fromMinor(cur.amountMinor).toFixed(2)}`
+        : "";
     });
 
-    row1.append(catIn, amtIn);
-
+    const dateWrap = document.createElement("div");
+    dateWrap.className = "ledger-row__date-wrap";
     const datePicker = createCDayPicker(t.date || todayYmd(), (ymd) => {
       commitTxField(t.id, { date: ymd });
-      refresh();
+      if (ymd.slice(0, 7) !== (el("activityMonth")?.value || activityMonth)) {
+        activityMonth = ymd.slice(0, 7);
+        refresh();
+      }
     });
+    datePicker.classList.add("cday--compact");
+    datePicker.querySelectorAll(".cday__btn > i, .cday__btn > svg").forEach((n) => n.remove());
+    setCDayValue(datePicker, t.date || todayYmd(), true);
+    dateWrap.appendChild(datePicker);
 
-    const acts = document.createElement("div");
-    acts.className = "ledger-edit__actions";
-
-    const fileIn = document.createElement("input");
-    fileIn.type = "file";
-    fileIn.accept = "image/*,application/pdf";
-    fileIn.hidden = true;
-    fileIn.addEventListener("change", async (e) => {
-      const file = e.target.files && e.target.files[0];
-      e.target.value = "";
-      if (!file || !Receipts) return;
-      const rid = uid();
-      await Receipts.putReceipt(rid, file, { name: file.name, mime: file.type });
-      commitTxField(t.id, { receiptId: rid });
-      refresh();
-    });
-
-    const receiptBtn = document.createElement("button");
-    receiptBtn.type = "button";
-    receiptBtn.className = "btn secondary btn--sm";
-    receiptBtn.textContent = t.receiptId ? "Receipt ✓" : "Receipt";
-    receiptBtn.addEventListener("click", () => fileIn.click());
-
-    const doneBtn = document.createElement("button");
-    doneBtn.type = "button";
-    doneBtn.className = "btn primary btn--sm";
-    doneBtn.textContent = "Done";
-    doneBtn.addEventListener("click", () => {
-      editingTxId = null;
-      refresh();
-    });
-
-    acts.append(fileIn, receiptBtn, doneBtn);
-    edit.append(row1, datePicker, acts);
-    return { edit, focusEl: catIn };
-  }
-
-  function buildLedgerRow(t) {
-    const wrap = document.createElement("div");
-    wrap.className = "ledger-row" + (editingTxId === t.id ? " is-editing" : "");
-    wrap.dataset.txId = t.id;
-
-    const head = document.createElement("div");
-    head.className = "ledger-row__head";
-
-    const main = document.createElement("button");
-    main.type = "button";
-    main.className = "ledger-row__main";
-    const typeClass = t.type === "income" ? "is-income" : "is-expense";
-    const sign = t.type === "income" ? "+" : "−";
-
-    const left = document.createElement("div");
-    left.className = "ledger-row__left";
-    const title = document.createElement("p");
-    title.className = `ledger-row__title ${typeClass}`;
-    title.textContent = t.category || "Other";
-    left.appendChild(title);
-    if (t.scope === "business" && t.type === "expense" && !t.receiptId) {
-      const sub = document.createElement("p");
-      sub.className = "ledger-row__sub";
-      sub.textContent = "No receipt";
-      left.appendChild(sub);
-    }
-
-    const right = document.createElement("div");
-    right.className = "ledger-row__right";
-    const amt = document.createElement("p");
-    amt.className = `ledger-row__amt money-num ${typeClass}`;
-    amt.textContent = sign + formatMoneyMinor(t.amountMinor || 0, t.currency || "GBP");
-    const date = document.createElement("p");
-    date.className = "ledger-row__date";
-    date.textContent = formatShortDate(t.date || todayYmd());
-    right.append(amt, date);
-
-    main.append(left, right);
-    main.addEventListener("click", () => {
-      editingTxId = editingTxId === t.id ? null : t.id;
-      refresh();
-    });
-
-    const del = document.createElement("button");
-    del.type = "button";
-    del.className = "ledger-row__more";
-    del.setAttribute("aria-label", "Delete");
-    del.innerHTML = `<i data-lucide="trash-2" aria-hidden="true"></i>`;
-    del.addEventListener("click", (e) => {
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "ledger-row__delete";
+    delBtn.setAttribute("aria-label", "Delete");
+    delBtn.innerHTML = `<i data-lucide="trash-2" aria-hidden="true"></i>`;
+    delBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       deleteTxById(t.id);
     });
 
-    head.append(main, del);
-    wrap.appendChild(head);
+    fields.append(catIn, amtIn, dateWrap, delBtn);
+    return { fields, focusEl: catIn };
+  }
 
-    if (editingTxId === t.id) {
-      const { edit, focusEl } = buildLedgerEdit(t);
-      wrap.appendChild(edit);
+  function buildLedgerRow(t) {
+    const wrap = document.createElement("div");
+    wrap.className =
+      "ledger-row ledger-row--inline " + (t.type === "income" ? "ledger-row--income" : "ledger-row--expense");
+    wrap.dataset.txId = t.id;
+
+    const actions = document.createElement("div");
+    actions.className = "ledger-row__actions";
+    actions.innerHTML = `
+      <button type="button" class="ledger-row__action ledger-row__action--delete" data-swipe-delete>Delete</button>`;
+
+    const surface = document.createElement("div");
+    surface.className = "ledger-row__surface";
+
+    const { fields, focusEl } = buildLedgerInlineFields(t);
+    surface.append(fields);
+    wrap.append(actions, surface);
+
+    bindLedgerSwipe(wrap, t.id);
+
+    if (pendingFocusTxId === t.id) {
       requestAnimationFrame(() => {
+        pendingFocusTxId = null;
+        focusEl?.focus();
+        focusEl?.select?.();
         wrap.scrollIntoView({ block: "nearest", behavior: "smooth" });
-        if (pendingFocusTxId === t.id) {
-          pendingFocusTxId = null;
-          focusEl?.focus();
-          focusEl?.select?.();
-        }
       });
     }
 
     return wrap;
   }
 
+  function isBlankStubTx(t) {
+    if (!t || t.debtId) return false;
+    if (t.amountMinor > 0) return false;
+    const cat = String(t.category || "").trim();
+    const note = String(t.note || "").trim();
+    return (!cat || cat === "Other") && !note;
+  }
+
+  /** Remove leftover empty drafts from failed/repeated Add taps (keep at most one). */
+  function pruneBlankStubTxs(keepId) {
+    const stubs = state.transactions.filter(isBlankStubTx);
+    if (stubs.length <= (keepId ? 1 : 0)) return false;
+    const keep = keepId || stubs[stubs.length - 1]?.id;
+    let changed = false;
+    state.transactions = state.transactions.filter((t) => {
+      if (!isBlankStubTx(t)) return true;
+      if (t.id === keep) return true;
+      changed = true;
+      return false;
+    });
+    return changed;
+  }
+
   function addTxInline(type) {
-    const id = uid();
     const scope = el("activityScope")?.value === "business" ? "business" : "personal";
     const txType = type === "income" ? "income" : "expense";
     const month = el("activityMonth")?.value || activityMonth;
     const day = todayYmd();
     const date = day.startsWith(month) ? day : `${month}-01`;
+
+    const existing = state.transactions.find(
+      (t) => isBlankStubTx(t) && t.scope === scope && t.type === txType && String(t.date || "").startsWith(month)
+    );
+    if (existing) {
+      existing.type = txType;
+      repo.saveTransaction(existing);
+      pruneBlankStubTxs(existing.id);
+      savePlanner();
+      pendingFocusTxId = existing.id;
+      if (parseHash() !== "activity") {
+        location.hash = "#/activity";
+        return;
+      }
+      refresh();
+      return;
+    }
+
+    const id = uid();
+    pruneBlankStubTxs(null);
     repo.saveTransaction({
       id,
       date,
@@ -1603,10 +1766,10 @@
       category: "",
       scope,
       note: "",
+      sortOrder: nextSortOrderForList({ month, scope }),
       createdAt: new Date().toISOString(),
     });
     savePlanner();
-    editingTxId = id;
     pendingFocusTxId = id;
     if (parseHash() !== "activity") {
       location.hash = "#/activity";
@@ -1616,6 +1779,7 @@
   }
 
   function renderActivity() {
+    if (pruneBlankStubTxs(pendingFocusTxId)) savePlanner();
     if (el("activityMonth")) el("activityMonth").value = activityMonth;
     if (el("activityMonthLabel")) el("activityMonthLabel").textContent = formatMonthLabel(activityMonth);
 
@@ -2067,51 +2231,25 @@
       b.classList.toggle("active", on);
       b.setAttribute("aria-selected", on ? "true" : "false");
     });
-    document.querySelectorAll("[data-report-scope]").forEach((b) => {
-      const on = (b.getAttribute("data-report-scope") || "") === reportScope;
-      b.classList.toggle("active", on);
-      b.setAttribute("aria-selected", on ? "true" : "false");
-    });
-    if (el("reportScope")) el("reportScope").value = reportScope;
 
     const range = reportRange();
     if (el("reportPeriodLabel")) el("reportPeriodLabel").textContent = range.label;
-    let txs = txsInRange(range.start, range.end);
-    if (reportScope) txs = txs.filter((t) => t.scope === reportScope);
+    const txs = txsInRange(range.start, range.end).filter((t) => t.scope === "business");
 
     let income = 0;
-    let bizIn = 0;
-    let bizOut = 0;
-    let personalIn = 0;
-    let personalOut = 0;
+    let expenses = 0;
     const byCat = {};
     txs.forEach((t) => {
       if (t.type === "income") {
         income += t.amountMinor;
-        if (t.scope === "business") bizIn += t.amountMinor;
-        else personalIn += t.amountMinor;
       } else {
-        if (t.scope === "business") bizOut += t.amountMinor;
-        else personalOut += t.amountMinor;
+        expenses += t.amountMinor;
         byCat[t.category] = (byCat[t.category] || 0) + t.amountMinor;
       }
     });
     if (el("reportIncome")) el("reportIncome").textContent = formatGbpStoredMinor(income);
-    if (el("reportBizProfit")) el("reportBizProfit").textContent = formatGbpStoredMinor(bizIn - bizOut);
-    if (el("reportPersonalLeft")) {
-      el("reportPersonalLeft").textContent = formatGbpStoredMinor(
-        reportScope === "business"
-          ? bizIn - bizOut
-          : reportScope === "personal"
-            ? personalIn - personalOut
-            : personalIn + bizIn - personalOut - bizOut
-      );
-      const label = el("reportPersonalLeft").previousElementSibling;
-      if (label && label.classList.contains("stat-tile__label")) {
-        label.textContent =
-          reportScope === "business" ? "Business left" : reportScope === "personal" ? "Personal left" : "Overall left";
-      }
-    }
+    if (el("reportExpenses")) el("reportExpenses").textContent = formatGbpStoredMinor(expenses);
+    if (el("reportBizProfit")) el("reportBizProfit").textContent = formatGbpStoredMinor(income - expenses);
 
     const ul = el("reportCategories");
     if (!ul) return;
@@ -2469,7 +2607,7 @@
     w.document.write(`<!DOCTYPE html><html><head><title>Veiro ${range.label}</title>
       <style>body{font-family:system-ui,sans-serif;padding:24px;color:#111}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:8px;text-align:left;font-variant-numeric:tabular-nums}h1{font-size:1.4rem}</style>
       </head><body><h1>Veiro · ${range.label}</h1>
-      <p>Income ${el("reportIncome")?.textContent || ""} · Business profit ${el("reportBizProfit")?.textContent || ""} · Left ${el("reportPersonalLeft")?.textContent || ""}</p>
+      <p>Income ${el("reportIncome")?.textContent || ""} · Expenses ${el("reportExpenses")?.textContent || ""} · Profit ${el("reportBizProfit")?.textContent || ""}</p>
       <table><thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Scope</th><th>Amount</th><th>Note</th><th>Receipt</th></tr></thead><tbody>${lines}</tbody></table>
       </body></html>`);
     w.document.close();
@@ -2582,19 +2720,21 @@
           x.classList.toggle("active", on);
           x.setAttribute("aria-selected", on ? "true" : "false");
         });
-        editingTxId = null;
         renderActivity();
         paintIcons();
       });
     });
 
-    document.querySelectorAll("[data-report-scope]").forEach((b) => {
+    document.querySelectorAll("[data-home-scope]").forEach((b) => {
       b.addEventListener("click", () => {
-        reportScope = b.getAttribute("data-report-scope") || "personal";
-        renderReports();
+        homeScope = b.getAttribute("data-home-scope") === "business" ? "business" : "personal";
+        if (el("homeScope")) el("homeScope").value = homeScope;
+        renderHome();
         paintIcons();
       });
     });
+
+    el("btnThemeToggle")?.addEventListener("click", toggleTheme);
 
     bindCSelects();
     bindCMonths();
