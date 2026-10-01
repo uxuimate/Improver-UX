@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f15a24" />
+    <title>Trial — Fudget</title>
+    <link rel="stylesheet" href="trial.css?v=1" />
+  </head>
+  <body>
+    <div class="fudget" id="fudgetApp">
+      <header class="fudget__header">
+        <div class="fudget__header-left">
+          <button type="button" class="fudget__icon-btn" id="fudgetBack" aria-label="Back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+          <span class="fudget__crumb">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
+            </svg>
+            Monthly
+          </span>
+        </div>
+        <h1 class="fudget__header-title" id="fudgetMonth">September</h1>
+        <div class="fudget__header-right">
+          <button type="button" class="fudget__icon-btn" id="fudgetMenu" aria-label="Menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <ul class="fudget__list" id="fudgetList" aria-label="September entries"></ul>
+
+      <footer class="fudget__footer">
+        <button type="button" class="fudget__fab fudget__fab--income" id="fudgetAddIncome">+ Income</button>
+        <button type="button" class="fudget__fab fudget__fab--expense" id="fudgetAddExpense">+ Expense</button>
+        <div class="fudget__balance">
+          <span>Balance</span>
+          <strong id="fudgetBalance">+ $ 0.00</strong>
+        </div>
+      </footer>
+    </div>
+
+    <a class="fudget__back-link" href="index.html">← Veiro</a>
+    <script src="trial.js?v=1"></script>
+  </body>
+</html>

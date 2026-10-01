@@ -139,10 +139,19 @@
     });
   }
 
+  function cdayPanelFor(root) {
+    if (!root) return null;
+    const local = root.querySelector(".cday__panel");
+    if (local) return local;
+    const id = root.dataset.cdayId;
+    if (!id) return null;
+    return document.querySelector(`.cday__panel[data-cday-owner="${id}"]`);
+  }
+
   function closeAllCDays() {
     document.querySelectorAll(".cday").forEach((node) => {
       node.classList.remove("is-open");
-      const panel = node.querySelector(".cday__panel");
+      const panel = cdayPanelFor(node);
       if (panel) {
         panel.classList.add("hidden");
         panel.style.position = "";
@@ -151,15 +160,28 @@
         panel.style.right = "";
         panel.style.width = "";
         panel.style.zIndex = "";
+        panel.style.visibility = "";
+        if (panel.parentElement !== node) {
+          const btn = node.querySelector(".cday__btn");
+          if (btn) btn.after(panel);
+          else node.appendChild(panel);
+        }
       }
       node.querySelector(".cday__btn")?.setAttribute("aria-expanded", "false");
+    });
+    document.querySelectorAll(".cday__panel[data-cday-owner]").forEach((panel) => {
+      const id = panel.dataset.cdayOwner;
+      if (!document.querySelector(`.cday[data-cday-id="${CSS.escape(id)}"]`)) panel.remove();
     });
   }
 
   function placeCDayPanel(root) {
     const btn = root.querySelector(".cday__btn");
-    const panel = root.querySelector(".cday__panel");
+    const panel = cdayPanelFor(root) || root.querySelector(".cday__panel");
     if (!btn || !panel) return;
+    if (!root.dataset.cdayId) root.dataset.cdayId = uid();
+    panel.dataset.cdayOwner = root.dataset.cdayId;
+    document.body.appendChild(panel);
     const rect = btn.getBoundingClientRect();
     const width = Math.min(292, window.innerWidth - 24);
     let left = rect.left;
@@ -167,7 +189,7 @@
     panel.classList.remove("hidden");
     panel.style.visibility = "hidden";
     panel.style.position = "fixed";
-    panel.style.zIndex = "80";
+    panel.style.zIndex = "90";
     panel.style.width = width + "px";
     panel.style.left = left + "px";
     panel.style.right = "auto";
@@ -181,10 +203,77 @@
     panel.style.visibility = "";
   }
 
+  function closeAllRowMenus() {
+    document.querySelectorAll(".row-menu").forEach((menu) => menu.remove());
+    document.querySelectorAll(".ledger-row__menu[aria-expanded='true']").forEach((btn) => {
+      btn.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function placeRowMenu(anchorBtn, menu) {
+    document.body.appendChild(menu);
+    const rect = anchorBtn.getBoundingClientRect();
+    const width = Math.min(200, window.innerWidth - 24);
+    menu.style.visibility = "hidden";
+    menu.style.position = "fixed";
+    menu.style.zIndex = "95";
+    menu.style.width = width + "px";
+    let left = rect.right - width;
+    if (left < 12) left = 12;
+    if (left + width > window.innerWidth - 12) left = Math.max(12, window.innerWidth - width - 12);
+    menu.style.left = left + "px";
+    menu.style.top = "0px";
+    const ph = menu.offsetHeight || 120;
+    let top = rect.bottom + 4;
+    if (top + ph > window.innerHeight - 12) {
+      top = Math.max(12, rect.top - ph - 4);
+    }
+    menu.style.top = top + "px";
+    menu.style.visibility = "";
+  }
+
+  function openRowMenu(anchorBtn, t) {
+    closeAllOverlays();
+    const menu = document.createElement("div");
+    menu.className = "row-menu";
+    menu.setAttribute("role", "menu");
+    const flipLabel = t.type === "income" ? "Make expense" : "Make income";
+    menu.innerHTML = `
+      <button type="button" class="row-menu__item" role="menuitem" data-row-action="copy">
+        <i data-lucide="copy" aria-hidden="true"></i><span>Copy</span>
+      </button>
+      <button type="button" class="row-menu__item" role="menuitem" data-row-action="flip">
+        <i data-lucide="repeat" aria-hidden="true"></i><span>${flipLabel}</span>
+      </button>
+      <button type="button" class="row-menu__item row-menu__item--danger" role="menuitem" data-row-action="delete">
+        <i data-lucide="trash-2" aria-hidden="true"></i><span>Delete</span>
+      </button>`;
+    menu.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const item = e.target.closest("[data-row-action]");
+      if (!item) return;
+      const action = item.getAttribute("data-row-action");
+      closeAllRowMenus();
+      if (action === "copy") {
+        copyTxById(t.id);
+      } else if (action === "flip") {
+        const nextType = t.type === "income" ? "expense" : "income";
+        commitTxField(t.id, { type: nextType });
+        refresh();
+      } else if (action === "delete") {
+        deleteTxById(t.id);
+      }
+    });
+    anchorBtn.setAttribute("aria-expanded", "true");
+    placeRowMenu(anchorBtn, menu);
+    paintIcons();
+  }
+
   function closeAllOverlays() {
     closeAllCSelects();
     closeAllCMonths();
     closeAllCDays();
+    closeAllRowMenus();
   }
 
   const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -1475,7 +1564,7 @@
     surface.addEventListener(
       "touchstart",
       (e) => {
-        if (e.target.closest("input, button, .cday, .ledger-row__delete, .ledger-row__handle")) return;
+        if (e.target.closest("input, button, .cday, .ledger-row__menu, .ledger-row__handle, .row-menu")) return;
         startX = e.touches[0].clientX;
         baseX = row.classList.contains("is-swipe-open") ? -reveal() : 0;
         dragging = true;
@@ -1566,10 +1655,25 @@
     listEl.addEventListener("pointercancel", endDrag);
   }
 
+  function currencyGlyph(currency) {
+    return (currency === "EUR" || (!currency && displayCurrency() === "EUR")) ? "€" : "£";
+  }
+
+  function formatLedgerAmountText(major, type, currency) {
+    const sign = type === "income" ? "+" : "−";
+    const num = Number(major || 0).toLocaleString("en-GB", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    return `${sign} ${currencyGlyph(currency)} ${num}`;
+  }
+
   function buildLedgerInlineFields(t) {
     const fields = document.createElement("div");
     fields.className = "ledger-row__fields";
 
+    const nameCell = document.createElement("div");
+    nameCell.className = "ledger-row__cell ledger-row__cell--name";
     const catIn = document.createElement("input");
     catIn.className = "ledger-row__input ledger-row__input--desc";
     catIn.type = "text";
@@ -1586,32 +1690,33 @@
       catIn.value = name;
       commitTxField(t.id, { category: name || "Other", note: name || "" });
     });
+    nameCell.appendChild(catIn);
 
+    const amtCell = document.createElement("div");
+    amtCell.className = "ledger-row__cell ledger-row__cell--amount";
     const amtIn = document.createElement("input");
     amtIn.className = "ledger-row__input ledger-row__input--amt";
     amtIn.type = "text";
     amtIn.inputMode = "decimal";
-    amtIn.placeholder = "0.00";
+    amtIn.placeholder = formatLedgerAmountText(0, t.type, t.currency);
     amtIn.setAttribute("aria-label", "Amount");
     const major = t.amountMinor ? Data.fromMinor(t.amountMinor) : 0;
-    amtIn.value = t.amountMinor
-      ? `${t.type === "income" ? "+" : "−"}${major.toFixed(2)}`
-      : "";
+    amtIn.value = t.amountMinor ? formatLedgerAmountText(major, t.type, t.currency) : "";
     amtIn.addEventListener("focus", () => {
       amtIn.value = t.amountMinor ? Data.fromMinor(t.amountMinor).toFixed(2) : "";
       amtIn.select?.();
     });
     amtIn.addEventListener("change", () => {
-      const v = parseMajorInput(String(amtIn.value || "0").replace(/^[+−-]/, ""));
+      const v = parseMajorInput(String(amtIn.value || "0").replace(/^[+−-]\s*[£€]?\s*/, ""));
       if (!Number.isFinite(v) || v < 0) {
         amtIn.value = t.amountMinor
-          ? `${t.type === "income" ? "+" : "−"}${Data.fromMinor(t.amountMinor).toFixed(2)}`
+          ? formatLedgerAmountText(Data.fromMinor(t.amountMinor), t.type, t.currency)
           : "";
         return;
       }
       commitTxField(t.id, { amountMinor: Data.toMinor(v) });
       t.amountMinor = Data.toMinor(v);
-      amtIn.value = `${t.type === "income" ? "+" : "−"}${v.toFixed(2)}`;
+      amtIn.value = formatLedgerAmountText(v, t.type, t.currency);
       renderActivitySummary(
         repo.getTransactions({
           month: activityFilter().month || undefined,
@@ -1624,12 +1729,13 @@
       const cur = repo.getTransaction(t.id);
       if (!cur) return;
       amtIn.value = cur.amountMinor
-        ? `${cur.type === "income" ? "+" : "−"}${Data.fromMinor(cur.amountMinor).toFixed(2)}`
+        ? formatLedgerAmountText(Data.fromMinor(cur.amountMinor), cur.type, cur.currency)
         : "";
     });
+    amtCell.appendChild(amtIn);
 
-    const dateWrap = document.createElement("div");
-    dateWrap.className = "ledger-row__date-wrap";
+    const dateCell = document.createElement("div");
+    dateCell.className = "ledger-row__cell ledger-row__cell--date";
     const datePicker = createCDayPicker(t.date || todayYmd(), (ymd) => {
       commitTxField(t.id, { date: ymd });
       if (ymd.slice(0, 7) !== (el("activityMonth")?.value || activityMonth)) {
@@ -1640,19 +1746,26 @@
     datePicker.classList.add("cday--compact");
     datePicker.querySelectorAll(".cday__btn > i, .cday__btn > svg").forEach((n) => n.remove());
     setCDayValue(datePicker, t.date || todayYmd(), true);
-    dateWrap.appendChild(datePicker);
+    dateCell.appendChild(datePicker);
 
-    const delBtn = document.createElement("button");
-    delBtn.type = "button";
-    delBtn.className = "ledger-row__delete";
-    delBtn.setAttribute("aria-label", "Delete");
-    delBtn.innerHTML = `<i data-lucide="trash-2" aria-hidden="true"></i>`;
-    delBtn.addEventListener("click", (e) => {
+    const menuCell = document.createElement("div");
+    menuCell.className = "ledger-row__cell ledger-row__cell--menu";
+    const menuBtn = document.createElement("button");
+    menuBtn.type = "button";
+    menuBtn.className = "ledger-row__menu";
+    menuBtn.setAttribute("aria-label", "Row actions");
+    menuBtn.setAttribute("aria-haspopup", "menu");
+    menuBtn.setAttribute("aria-expanded", "false");
+    menuBtn.innerHTML = `<i data-lucide="ellipsis-vertical" aria-hidden="true"></i>`;
+    menuBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      deleteTxById(t.id);
+      const open = menuBtn.getAttribute("aria-expanded") === "true";
+      closeAllOverlays();
+      if (!open) openRowMenu(menuBtn, t);
     });
+    menuCell.appendChild(menuBtn);
 
-    fields.append(catIn, amtIn, dateWrap, delBtn);
+    fields.append(nameCell, amtCell, dateCell, menuCell);
     return { fields, focusEl: catIn };
   }
 
@@ -1765,6 +1878,8 @@
   }
 
   function renderActivity() {
+    closeAllRowMenus();
+    closeAllCDays();
     if (pruneBlankStubTxs(pendingFocusTxId)) savePlanner();
     if (el("activityMonth")) el("activityMonth").value = activityMonth;
     if (el("activityMonthLabel")) el("activityMonthLabel").textContent = formatMonthLabel(activityMonth);
